@@ -15,8 +15,8 @@ Group=teamstream
 LimitNOFILE=4096
 Restart=always
 RestartSec=5
-WorkingDirectory=/opt/teamstream
-ExecStart=/opt/teamstream/pocketbase serve --http=127.0.0.1:8090
+WorkingDirectory=/opt/teamstream/backend
+ExecStart=/opt/teamstream/backend/pocketbase serve --http=127.0.0.1:8090
 
 [Install]
 WantedBy=multi-user.target

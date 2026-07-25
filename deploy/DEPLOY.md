@@ -35,50 +35,43 @@ powershell -ExecutionPolicy Bypass -File scripts\build-web.ps1
 ```
 
 This runs `flutter build web --release` and copies the output into
-`backend\pb_public\`. (Static files — safe to build on Windows, run on Linux.)
+`backend\pb_public\`. Commit the result — the Linux box has no Flutter
+toolchain, so it receives the frontend via `git pull`, not scp:
+
+```bash
+git add backend/pb_public
+git commit -m "Rebuild web app"
+git push
+```
 
 ---
 
-## Step 2 — Copy the backend to the Linux box
+## Step 2 — Clone the repo onto the Linux box
 
-Ship the **backend** folder, but **not** the Windows binary and **not** dev data.
-Create a clean install dir on the box (`/opt/teamstream`) containing:
-
-```
-/opt/teamstream/
-├── pocketbase            # Linux binary — downloaded in Step 3, NOT the .exe
-├── pb_public/            # the Flutter web build from Step 1
-├── pb_migrations/        # schema + history + member seed  (rebuilds a fresh DB)
-└── pb_hooks/             # history.pb.js
-```
-
-From the dev machine (adjust user/host), e.g. with scp:
-
-```bash
-scp -r backend/pb_public backend/pb_migrations backend/pb_hooks  you@BOX:/tmp/teamstream/
-```
-
-Then on the box:
+Create the install dir as a git clone (adjust the URL if you use SSH):
 
 ```bash
 sudo mkdir -p /opt/teamstream
-sudo mv /tmp/teamstream/* /opt/teamstream/
+sudo chown "$(whoami)" /opt/teamstream
+git clone https://github.com/shayaandanishansari/teamstream /opt/teamstream
 ```
 
-> Do **not** copy `backend/pb_data/` — a fresh start is cleaner. The migrations
-> rebuild all collections and seed the three members automatically. (If you ever
-> *do* want the dev data, copy `pb_data/` too; the seed migration is idempotent.)
+`/opt/teamstream/backend/` now has `pb_public/`, `pb_migrations/`, and
+`pb_hooks/` — everything except the (gitignored) PocketBase binary and the
+(gitignored) `pb_data/` runtime state, which is created fresh by migrations.
 
 ---
 
 ## Step 3 — Get the matching Linux PocketBase binary (v0.39.9)
 
 Version **must** match dev (0.39.9) so migrations + hooks behave identically.
+The binary is gitignored — it never rides along with `git pull` — so fetch it
+once, here, into the cloned `backend/` dir:
 
 ```bash
 uname -m        # x86_64 -> amd64 ;  aarch64 -> arm64  (e.g. Raspberry Pi)
 
-cd /opt/teamstream
+cd /opt/teamstream/backend
 # amd64:
 wget https://github.com/pocketbase/pocketbase/releases/download/v0.39.9/pocketbase_0.39.9_linux_amd64.zip
 # --- or arm64: ---
@@ -86,27 +79,43 @@ wget https://github.com/pocketbase/pocketbase/releases/download/v0.39.9/pocketba
 
 unzip pocketbase_0.39.9_linux_*.zip pocketbase
 chmod +x pocketbase
+rm pocketbase_0.39.9_linux_*.zip
 ```
 
 ---
 
 ## Step 4 — First run: migrate, seed, create admin
 
+The service runs as a dedicated unprivileged **`teamstream`** user, but the
+repo at `/opt/teamstream` stays owned by your own login (so `git pull` for
+redeploys never needs sudo). Only the runtime DB directory (`pb_data/`,
+created here) is locked down to the `teamstream` user:
+
+```bash
+sudo useradd --system --shell /usr/sbin/nologin teamstream || true
+
+# teamstream needs to read the repo (git-managed files, no secrets) and
+# execute the binary — grant read+traverse without changing the owner:
+sudo chmod -R o+rX /opt/teamstream
+
+# pb_data holds the SQLite DB (hashed passwords) — keep it private to teamstream:
+sudo mkdir -p /opt/teamstream/backend/pb_data
+sudo chown teamstream:teamstream /opt/teamstream/backend/pb_data
+sudo chmod 700 /opt/teamstream/backend/pb_data
+```
+
 The app is gated by **one shared password** the three of you type in to sign in.
 It's set here, at migrate time, via `TEAMSTREAM_PASSWORD` (min 8 chars). Choose
 it now — this is the password you'll give Umair and Tawab.
 
 ```bash
-sudo useradd --system --home /opt/teamstream --shell /usr/sbin/nologin teamstream || true
-sudo chown -R teamstream:teamstream /opt/teamstream
-
 # Apply migrations: creates collections + seeds the 3 members as auth accounts
 # that all share THIS password. (env passed through sudo via `env`.)
 sudo -u teamstream env TEAMSTREAM_PASSWORD='choose-a-shared-password' \
-  /opt/teamstream/pocketbase migrate up
+  /opt/teamstream/backend/pocketbase migrate up
 
 # Create the admin account (for the /_/ dashboard — separate from the app login):
-sudo -u teamstream /opt/teamstream/pocketbase superuser create you@example.com 'a-strong-password'
+sudo -u teamstream /opt/teamstream/backend/pocketbase superuser create you@example.com 'a-strong-password'
 ```
 
 > Changing the shared password later: do it from the `/_/` admin dashboard →
@@ -174,11 +183,25 @@ sudo systemctl status cloudflared
 
 ## Redeploying after code changes
 
-- **Frontend change:** re-run `scripts\build-web.ps1`, copy `pb_public/` to the
-  box, `sudo systemctl restart pocketbase`.
-- **New migration / hook:** copy `pb_migrations/` or `pb_hooks/`, then
-  `sudo systemctl restart pocketbase` (migrations apply on start; PB must be
-  restarted after editing hooks).
+Everything (`pb_public/`, `pb_migrations/`, `pb_hooks/`) ships via git now —
+no scp step. On the dev machine, rebuild + commit + push:
+
+- **Frontend change:** re-run `scripts\build-web.ps1`, then
+  `git add backend/pb_public && git commit && git push`.
+- **New migration / hook:** just commit the changed files under
+  `backend/pb_migrations/` or `backend/pb_hooks/` and push.
+
+Then on the box:
+
+```bash
+cd /opt/teamstream && git pull
+sudo systemctl restart pocketbase
+```
+
+(Migrations apply on start; PocketBase must be restarted after pulling new
+hooks or a new `pb_public/` build too, since it serves static files from
+memory-mapped disk reads that are fine to just re-read, but a restart keeps
+behavior predictable and picks up hook changes.)
 
 ## Notes / gotchas
 
