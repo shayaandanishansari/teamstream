@@ -39,35 +39,21 @@ This runs `flutter build web --release` and copies the output into
 
 ---
 
-## Step 2 — Copy the backend to the Linux box
+## Step 2 — Clone the repo to /opt/teamstream
 
-Ship the **backend** folder, but **not** the Windows binary and **not** dev data.
-Create a clean install dir on the box (`/opt/teamstream`) containing:
-
-```
-/opt/teamstream/
-├── pocketbase            # Linux binary — downloaded in Step 3, NOT the .exe
-├── pb_public/            # the Flutter web build from Step 1
-├── pb_migrations/        # schema + history + member seed  (rebuilds a fresh DB)
-└── pb_hooks/             # history.pb.js
-```
-
-From the dev machine (adjust user/host), e.g. with scp:
+The box has no Flutter — but it doesn't need it. The built web app (`pb_public/`),
+the migrations, and the hooks are all committed, so a plain clone gets everything.
+PocketBase runs out of the `backend/` subfolder.
 
 ```bash
-scp -r backend/pb_public backend/pb_migrations backend/pb_hooks  you@BOX:/tmp/teamstream/
+sudo git clone https://github.com/shayaandanishansari/teamstream.git /opt/teamstream
+#   already cloned earlier?  ->  cd /opt/teamstream && sudo git pull
 ```
 
-Then on the box:
-
-```bash
-sudo mkdir -p /opt/teamstream
-sudo mv /tmp/teamstream/* /opt/teamstream/
-```
-
-> Do **not** copy `backend/pb_data/` — a fresh start is cleaner. The migrations
-> rebuild all collections and seed the three members automatically. (If you ever
-> *do* want the dev data, copy `pb_data/` too; the seed migration is idempotent.)
+The PocketBase workdir is **`/opt/teamstream/backend/`** — it already holds
+`pb_public/`, `pb_migrations/`, `pb_hooks/`. Only the Linux binary and the
+runtime `pb_data/` get added on the box (next steps). `pb_data/` is gitignored,
+so a fresh DB is built from the migrations on first run.
 
 ---
 
@@ -78,13 +64,13 @@ Version **must** match dev (0.39.9) so migrations + hooks behave identically.
 ```bash
 uname -m        # x86_64 -> amd64 ;  aarch64 -> arm64  (e.g. Raspberry Pi)
 
-cd /opt/teamstream
+cd /opt/teamstream/backend
 # amd64:
 wget https://github.com/pocketbase/pocketbase/releases/download/v0.39.9/pocketbase_0.39.9_linux_amd64.zip
 # --- or arm64: ---
 # wget https://github.com/pocketbase/pocketbase/releases/download/v0.39.9/pocketbase_0.39.9_linux_arm64.zip
 
-unzip pocketbase_0.39.9_linux_*.zip pocketbase
+unzip -o pocketbase_0.39.9_linux_*.zip pocketbase
 chmod +x pocketbase
 ```
 
@@ -103,10 +89,10 @@ sudo chown -R teamstream:teamstream /opt/teamstream
 # Apply migrations: creates collections + seeds the 3 members as auth accounts
 # that all share THIS password. (env passed through sudo via `env`.)
 sudo -u teamstream env TEAMSTREAM_PASSWORD='choose-a-shared-password' \
-  /opt/teamstream/pocketbase migrate up
+  /opt/teamstream/backend/pocketbase migrate up
 
 # Create the admin account (for the /_/ dashboard — separate from the app login):
-sudo -u teamstream /opt/teamstream/pocketbase superuser create you@example.com 'a-strong-password'
+sudo -u teamstream /opt/teamstream/backend/pocketbase superuser create you@example.com 'a-strong-password'
 ```
 
 > Changing the shared password later: do it from the `/_/` admin dashboard →
