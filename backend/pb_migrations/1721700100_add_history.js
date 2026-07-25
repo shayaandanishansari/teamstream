@@ -9,9 +9,10 @@ migrate((app) => {
   const history = new Collection({
     type: "base",
     name: "history",
-    listRule: "",
-    viewRule: "",
-    // create/update/delete rules left null => superuser-only.
+    // Readable only by an authenticated member (same shared-password gate as the
+    // rest of the app); create/update/delete left null => superuser/hook-only.
+    listRule: "@request.auth.id != ''",
+    viewRule: "@request.auth.id != ''",
     fields: [
       { name: "collection", type: "text", required: true, max: 60 },
       { name: "record", type: "text", required: true, max: 60 },

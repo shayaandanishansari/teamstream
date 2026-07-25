@@ -11,7 +11,17 @@ import '../identity/identity.dart';
 import 'pocketbase_repo.dart';
 import 'team_stream_repo.dart';
 
-final pocketBaseProvider = Provider<PocketBase>((ref) => PocketBase(kPocketBaseUrl));
+final pocketBaseProvider = Provider<PocketBase>((ref) {
+  final prefs = ref.watch(sharedPrefsProvider);
+  // Persist the auth token on-device so the shared password is entered once per
+  // device, not every launch. Survives restarts until the token expires.
+  final store = AsyncAuthStore(
+    save: (data) async => prefs.setString('pb_auth', data),
+    clear: () async => prefs.remove('pb_auth'),
+    initial: prefs.getString('pb_auth'),
+  );
+  return PocketBase(kPocketBaseUrl, authStore: store);
+});
 
 final repoProvider = Provider<TeamStreamRepo>((ref) {
   final repo = PocketBaseRepo(ref.watch(pocketBaseProvider));

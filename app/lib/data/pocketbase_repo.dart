@@ -115,6 +115,34 @@ class PocketBaseRepo implements TeamStreamRepo {
     return records.map(_member).toList();
   }
 
+  // ---- auth (shared-password gate) ----
+
+  /// Login identity is an internal email derived from the name (never shown to
+  /// the user), matching how members are seeded (see the seed migration).
+  String _emailFor(String name) => '${name.trim().toLowerCase()}@teamstream.local';
+
+  @override
+  Future<Member> authenticate(String name, String password) async {
+    final res =
+        await pb.collection('members').authWithPassword(_emailFor(name), password);
+    final me = _member(res.record);
+    setActor(me.id, me.name);
+    return me;
+  }
+
+  @override
+  bool get isAuthenticated => pb.authStore.isValid;
+
+  @override
+  Member? get currentMember {
+    if (!pb.authStore.isValid) return null;
+    final r = pb.authStore.record;
+    return r == null ? null : _member(r);
+  }
+
+  @override
+  void signOut() => pb.authStore.clear();
+
   @override
   Stream<List<Work>> watchWorks() => _watch('works', _work);
 

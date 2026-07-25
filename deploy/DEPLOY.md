@@ -18,17 +18,12 @@ the app.
 
 ---
 
-## Step 0 — Prerequisite: domain on Cloudflare (one-time, do this first)
+## Step 0 — Prerequisite: domain on Cloudflare  ✅ already satisfied
 
-Cloudflare Tunnel needs the domain's DNS managed by Cloudflare.
-
-1. Create a free Cloudflare account, **Add a site** → `shayaandanishansari.com`.
-2. Cloudflare gives you two nameservers. At your **registrar** (wherever you
-   bought the domain), replace the nameservers with those two.
-3. Wait for Cloudflare to show the domain **Active** (minutes to a few hours).
-
-This does not disrupt anything else you host on the domain — Cloudflare imports
-your existing records; you can review them before activating.
+`shayaandanishansari.com`'s DNS **and** apex site are already on Cloudflare, so
+`cloudflared tunnel route dns` (Step 6) creates the `teamstream` subdomain CNAME
+directly in your existing zone — **no nameserver change, and the apex site is
+untouched** (it's just one new DNS record + a tunnel ingress). Skip to Step 1.
 
 ---
 
@@ -97,16 +92,26 @@ chmod +x pocketbase
 
 ## Step 4 — First run: migrate, seed, create admin
 
+The app is gated by **one shared password** the three of you type in to sign in.
+It's set here, at migrate time, via `TEAMSTREAM_PASSWORD` (min 8 chars). Choose
+it now — this is the password you'll give Umair and Tawab.
+
 ```bash
 sudo useradd --system --home /opt/teamstream --shell /usr/sbin/nologin teamstream || true
 sudo chown -R teamstream:teamstream /opt/teamstream
 
-# Apply migrations (creates collections + seeds Shayaan/Umair/Tawab):
-sudo -u teamstream /opt/teamstream/pocketbase migrate up
+# Apply migrations: creates collections + seeds the 3 members as auth accounts
+# that all share THIS password. (env passed through sudo via `env`.)
+sudo -u teamstream env TEAMSTREAM_PASSWORD='choose-a-shared-password' \
+  /opt/teamstream/pocketbase migrate up
 
-# Create the admin account (for the /_/ dashboard):
+# Create the admin account (for the /_/ dashboard — separate from the app login):
 sudo -u teamstream /opt/teamstream/pocketbase superuser create you@example.com 'a-strong-password'
 ```
+
+> Changing the shared password later: do it from the `/_/` admin dashboard →
+> members → edit each of the 3 → set a new password. (The seed only runs on a
+> fresh DB; re-running migrations won't reset it.)
 
 ---
 
@@ -157,11 +162,13 @@ sudo systemctl status cloudflared
 
 ## Step 7 — Verify + hand it to your brothers
 
-1. Open `https://teamstream.shayaandanishansari.com` — the board loads, name
-   picker shows Shayaan / Umair / Tawab.
+1. Open `https://teamstream.shayaandanishansari.com` — tap your name, enter the
+   shared password → the board loads. (The session is remembered on-device, so
+   the password is asked once per device, not every launch.)
 2. Admin dashboard: `https://teamstream.shayaandanishansari.com/_/`.
 3. On each phone: open the URL → browser menu → **Add to Home Screen**. It
    installs as an app (icon + full-screen) via the existing `manifest.json`.
+4. Give Umair and Tawab the URL **and the shared password**.
 
 ---
 
@@ -175,6 +182,12 @@ sudo systemctl status cloudflared
 
 ## Notes / gotchas
 
+- **Access = one shared password.** `members` is an auth collection; every data
+  collection requires a signed-in request, so nobody with just the URL can read
+  or write anything. Login identity is an internal email derived from the name
+  (`shayaan@teamstream.local`) — users never see it. Honest limit: shared
+  password = no per-person accountability, and if it leaks you rotate it for all
+  three (admin dashboard → members). Verified locally end-to-end before ship.
 - **Realtime through the tunnel:** PocketBase realtime is SSE over HTTP —
   Cloudflare passes it through fine, so live "hot task" updates work remotely.
 - **App URL is auto-resolving:** the web app talks to whatever origin served it

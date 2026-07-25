@@ -69,7 +69,7 @@ class _AppShellState extends ConsumerState<AppShell> {
           Text('TeamStream', style: displayFont(size: 24, weight: FontWeight.w900)),
           const Spacer(),
           if (me != null)
-            _MeChip(member: me, onTap: () => ref.read(identityProvider.notifier).clear()),
+            _MeChip(member: me, onTap: () => ref.read(identityProvider.notifier).logout()),
         ],
       ),
     );

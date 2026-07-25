@@ -1,16 +1,29 @@
 /// <reference path="../pb_data/types.d.ts" />
 
 // TeamStream initial schema — 5 collections.
-// Access rules are open ("") on purpose: the whole backend lives behind a
-// private, self-hosted setup for a 3-person trusted team (no per-user auth).
+// Access model: a single SHARED PASSWORD gates the whole app.
+//  - `members` is an AUTH collection (the 3 accounts are pre-created in the seed
+//    migration, all sharing one password). Its name+color are readable WITHOUT
+//    auth so the login screen can show who to sign in as; emails stay hidden.
+//  - Every DATA collection (works/tasks/time_entries/events) requires an
+//    authenticated request (`@request.auth.id != ''`).
+// The login identity is the member's email, derived internally from their name
+// (e.g. shayaan@teamstream.local). Users never see it — they tap their name and
+// type the shared password.
 migrate((app) => {
-  const open = { listRule: "", viewRule: "", createRule: "", updateRule: "", deleteRule: "" };
+  const authed = "@request.auth.id != ''";
+  const rw = { listRule: authed, viewRule: authed, createRule: authed, updateRule: authed, deleteRule: authed };
 
-  // 1. members — the 3 people (seeded separately once we know the names)
+  // 1. members — the 3 people AND the auth accounts (shared password).
   const members = new Collection({
-    type: "base",
+    type: "auth",
     name: "members",
-    ...open,
+    listRule: "",      // names + colors readable pre-auth (for the login picker)
+    viewRule: "",
+    createRule: null,  // no self-registration; seeded + superuser-managed only
+    updateRule: null,
+    deleteRule: null,
+    passwordAuth: { enabled: true, identityFields: ["email"] },
     fields: [
       { name: "name", type: "text", required: true, max: 50 },
       { name: "color", type: "text", max: 20 },
@@ -22,7 +35,7 @@ migrate((app) => {
   const works = new Collection({
     type: "base",
     name: "works",
-    ...open,
+    ...rw,
     fields: [
       { name: "title", type: "text", required: true, max: 120 },
       { name: "position", type: "number" },
@@ -35,7 +48,7 @@ migrate((app) => {
   const tasks = new Collection({
     type: "base",
     name: "tasks",
-    ...open,
+    ...rw,
     fields: [
       { name: "work", type: "relation", required: true, collectionId: works.id, maxSelect: 1, cascadeDelete: true },
       { name: "title", type: "text", required: true, max: 200 },
@@ -54,7 +67,7 @@ migrate((app) => {
   const timeEntries = new Collection({
     type: "base",
     name: "time_entries",
-    ...open,
+    ...rw,
     fields: [
       { name: "task", type: "relation", required: true, collectionId: tasks.id, maxSelect: 1, cascadeDelete: true },
       { name: "member", type: "relation", required: true, collectionId: members.id, maxSelect: 1, cascadeDelete: true },
@@ -68,7 +81,7 @@ migrate((app) => {
   const events = new Collection({
     type: "base",
     name: "events",
-    ...open,
+    ...rw,
     fields: [
       { name: "title", type: "text", required: true, max: 200 },
       { name: "date", type: "date", required: true },

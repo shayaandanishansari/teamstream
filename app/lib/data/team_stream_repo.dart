@@ -10,6 +10,21 @@ import '../models/event.dart';
 abstract class TeamStreamRepo {
   Future<List<Member>> fetchMembers();
 
+  // ---- auth (shared-password gate) ----
+
+  /// Log in with the shared password. `name` is one of the members; the impl
+  /// derives the backend login identity from it. Returns the signed-in member.
+  Future<Member> authenticate(String name, String password);
+
+  /// Whether there's a currently-valid session on this device.
+  bool get isAuthenticated;
+
+  /// The signed-in member (from the persisted session), or null.
+  Member? get currentMember;
+
+  /// Clear the session (log out).
+  void signOut();
+
   Stream<List<Work>> watchWorks();
   Stream<List<Task>> watchTasks();
   Stream<List<TimeEntry>> watchTimeEntries();
