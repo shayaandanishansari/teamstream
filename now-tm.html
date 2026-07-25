@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Now TM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700;900&family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FFFBF3;
+    --card:#FFFFFF;
+    --ink:#1B1A22;
+    --ink-dim:#6B6875;
+    --coral:#FF5A36;
+    --coral-soft:#FFE4DA;
+    --lime:#B4E23C;
+    --violet:#6A4CFF;
+    --line:#EDE7DA;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:'Space Grotesk',sans-serif;
+    padding:0 0 80px;
+  }
+  .wrap{max-width:760px;margin:0 auto;padding:0 28px;}
+  header{padding:56px 0 40px;position:relative;}
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--coral);font-weight:500;
+  }
+  h1{
+    font-family:'Fraunces',serif;font-weight:900;font-size:64px;line-height:.95;
+    margin:10px 0 18px;letter-spacing:-.02em;
+  }
+  h1 .dot{
+    display:inline-block;width:16px;height:16px;border-radius:50%;background:var(--coral);
+    margin-left:8px;vertical-align:middle;animation:pulse 1.6s infinite;
+  }
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(255,90,54,.5);}
+    70%{box-shadow:0 0 0 16px rgba(255,90,54,0);}
+    100%{box-shadow:0 0 0 0 rgba(255,90,54,0);}
+  }
+  .tagline{font-size:19px;color:var(--ink-dim);max-width:520px;line-height:1.5;}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:36px 0;}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px 24px;
+  }
+  .card h3{
+    font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;
+    letter-spacing:.1em;color:var(--ink-dim);margin:0 0 10px;font-weight:500;
+  }
+  .card p{margin:0;font-size:15px;line-height:1.55;}
+  .card.accent{background:var(--ink);color:var(--bg);}
+  .card.accent h3{color:#ffffff99;}
+
+  .lifecycle{
+    display:flex;align-items:center;gap:0;margin:44px 0;background:var(--card);
+    border:1px solid var(--line);border-radius:18px;padding:26px 20px;overflow-x:auto;
+  }
+  .stage{flex:1;min-width:140px;text-align:center;padding:0 14px;position:relative;}
+  .stage:not(:last-child):after{
+    content:'→';position:absolute;right:-4px;top:22px;color:var(--ink-dim);font-size:18px;
+  }
+  .stage .chip{
+    width:38px;height:38px;border-radius:11px;margin:0 auto 12px;display:flex;
+    align-items:center;justify-content:center;font-size:17px;
+  }
+  .stage:nth-child(1) .chip{background:#EFEDF4;color:var(--ink-dim);}
+  .stage:nth-child(2) .chip{background:var(--lime);color:var(--ink);}
+  .stage:nth-child(3) .chip{background:var(--coral-soft);color:var(--coral);text-decoration:line-through;}
+  .stage:nth-child(4) .chip{background:transparent;border:1.5px dashed var(--ink-dim);color:var(--ink-dim);}
+  .stage span{font-size:13px;color:var(--ink-dim);}
+
+  .views{margin:44px 0;}
+  .views h2, .section h2{
+    font-family:'Fraunces',serif;font-weight:700;font-size:26px;margin:0 0 18px;
+  }
+  .view-row{
+    display:flex;gap:14px;align-items:flex-start;padding:16px 0;border-top:1px solid var(--line);
+  }
+  .view-row:first-of-type{border-top:none;}
+  .view-tag{
+    font-family:'IBM Plex Mono',monospace;font-size:11px;background:var(--violet);color:#fff;
+    padding:4px 10px;border-radius:20px;white-space:nowrap;margin-top:2px;
+  }
+  .view-row p{margin:0;font-size:14.5px;color:var(--ink-dim);line-height:1.5;}
+  .view-row b{color:var(--ink);font-weight:600;}
+
+  .footer-strip{
+    margin-top:48px;padding:26px 28px;border-radius:18px;background:linear-gradient(120deg,var(--coral),var(--violet));
+    color:#fff;
+  }
+  .footer-strip .eyebrow2{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;opacity:.85;}
+  .footer-strip p{font-size:15px;margin:8px 0 0;line-height:1.5;max-width:560px;}
+
+  @media(max-width:600px){
+    h1{font-size:44px;}
+    .grid{grid-template-columns:1fr;}
+    .lifecycle{flex-direction:column;}
+    .stage:not(:last-child):after{display:none;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">personal work ledger</div>
+    <h1>Now TM<span class="dot"></span></h1>
+    <div class="tagline">Not a todo list. A live answer to "what's actually alive right now" — across every project you're running at once.</div>
+  </header>
+
+  <div class="grid">
+    <div class="card">
+      <h3>The problem it solves</h3>
+      <p>Not boredom, not laziness — <b>confusion</b>. Too many live threads, no signal for which one is the real one right now.</p>
+    </div>
+    <div class="card accent">
+      <h3>The core unit</h3>
+      <p>Work → Tasks, nested. A Work's state is derived from its tasks, never set by hand.</p>
+    </div>
+  </div>
+
+  <div class="lifecycle">
+    <div class="stage"><div class="chip">○</div><span>Not started</span></div>
+    <div class="stage"><div class="chip">◐</div><span>In progress</span></div>
+    <div class="stage"><div class="chip">—</div><span>Done, fading 3–4 days</span></div>
+    <div class="stage"><div class="chip">···</div><span>Archived, out of view</span></div>
+  </div>
+
+  <div class="views">
+    <h2>Three zooms, one map</h2>
+    <div class="view-row">
+      <div class="view-tag">Days</div>
+      <p><b>Horizontal scroll.</b> Day-by-day, built first — resolves the "what's alive right now" confusion directly.</p>
+    </div>
+    <div class="view-row">
+      <div class="view-tag">Week</div>
+      <p><b>Vertical stack.</b> Seven days at a glance — enough range to see a pattern forming.</p>
+    </div>
+    <div class="view-row">
+      <div class="view-tag">Month</div>
+      <p><b>Calendar grid.</b> Where deadlines live — things due later, not active today, still visible.</p>
+    </div>
+    <div class="view-row">
+      <div class="view-tag">Time</div>
+      <p><b>Daily / weekly / monthly rollups.</b> Real hours per task, not guesses — the number that tells you what to actually keep doing.</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Notes, always current</h2>
+    <div class="view-row" style="border-top:none;padding-top:0;">
+      <p>Day-level notes, visible on the calendar. The latest one is always pinned — a single line of context you never have to go dig for.</p>
+    </div>
+  </div>
+
+  <div class="footer-strip">
+    <div class="eyebrow2">Who it's for</div>
+    <p>Freelancers, indie builders, small mission-driven teams — anyone running several self-owned threads at once with no external structure imposed on them. Built selfishly, for one person, on purpose.</p>
+  </div>
+</div>
+</body>
+</html>

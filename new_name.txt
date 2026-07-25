@@ -1,0 +1,6 @@
+New Name is Team Stream
+
+Personal Flow
+1) Add To do lists
+2) Click on a task (start stop)
+3) Track and see historical time for tasks

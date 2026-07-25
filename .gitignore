@@ -1,0 +1,28 @@
+# === OS / editor junk ===
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+*.iml
+
+# (Flutter build + tooling — app/build/, app/.dart_tool/, etc. — are covered
+#  by app/.gitignore, which applies within the app/ subtree.)
+
+# === PocketBase backend ===
+
+# Per-platform binary — not source. Download v0.39.9 per deploy/DEPLOY.md.
+backend/pocketbase
+backend/pocketbase.exe
+
+# Runtime state: the SQLite database, logs, auth secrets, and generated
+# types. The schema lives in pb_migrations/ and is fully reproducible, so the
+# data must NEVER be committed (it also contains superuser credentials).
+backend/pb_data/
+
+# Build artifact: the compiled Flutter web app, produced on demand by
+# scripts/build-web.ps1 (shipped to the box via scp, not via git).
+backend/pb_public/
+
+# PocketBase's own distribution docs (shipped alongside the binary).
+backend/CHANGELOG.md
+backend/LICENSE.md

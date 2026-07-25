@@ -1,0 +1,13 @@
+# Cloudflare Tunnel config for TeamStream.
+# Place at ~/.cloudflared/config.yml on the Linux box (see deploy/DEPLOY.md).
+# Replace <TUNNEL_ID> with the id printed by `cloudflared tunnel create teamstream`.
+
+tunnel: teamstream
+credentials-file: /root/.cloudflared/<TUNNEL_ID>.json
+
+ingress:
+  # Public name -> local PocketBase (app + API, same origin).
+  - hostname: teamstream.shayaandanishansari.com
+    service: http://127.0.0.1:8090
+  # Everything else 404s.
+  - service: http_status:404

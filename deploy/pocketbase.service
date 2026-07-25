@@ -1,0 +1,22 @@
+# TeamStream backend — PocketBase, always-on via systemd.
+# Install to /etc/systemd/system/pocketbase.service (see deploy/DEPLOY.md).
+#
+# Binds to 127.0.0.1 ONLY: PocketBase is never exposed on the LAN or internet.
+# The Cloudflare tunnel (running on this same box) is the sole ingress, and it
+# connects locally. Nothing reaches PB except through the authenticated tunnel.
+[Unit]
+Description=TeamStream PocketBase
+After=network.target
+
+[Service]
+Type=simple
+User=teamstream
+Group=teamstream
+LimitNOFILE=4096
+Restart=always
+RestartSec=5
+WorkingDirectory=/opt/teamstream
+ExecStart=/opt/teamstream/pocketbase serve --http=127.0.0.1:8090
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>TeamStream</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700;900&family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F3FBFA;
+    --card:#FFFFFF;
+    --ink:#0F1F1D;
+    --ink-dim:#5C6D6A;
+    --teal:#00A896;
+    --teal-soft:#D6F5EF;
+    --amber:#FFB238;
+    --cobalt:#3A5AFF;
+    --line:#E1EFEC;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:'Space Grotesk',sans-serif;
+    padding:0 0 80px;
+  }
+  .wrap{max-width:760px;margin:0 auto;padding:0 28px;}
+  header{padding:56px 0 40px;}
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--teal);font-weight:500;
+  }
+  h1{
+    font-family:'Fraunces',serif;font-weight:900;font-size:64px;line-height:.95;
+    margin:10px 0 18px;letter-spacing:-.02em;
+  }
+  .tagline{font-size:19px;color:var(--ink-dim);max-width:540px;line-height:1.5;}
+
+  /* signature: glowing task board */
+  .board{
+    display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin:36px 0 44px;
+  }
+  .node{
+    aspect-ratio:1;border-radius:12px;background:var(--card);border:1.5px solid var(--line);
+    display:flex;align-items:center;justify-content:center;position:relative;
+  }
+  .node.hot{background:var(--teal);border-color:var(--teal);
+    box-shadow:0 0 0 0 rgba(0,168,150,.5);animation:glow 1.8s infinite;}
+  .node.warm{background:var(--teal-soft);border-color:var(--teal);}
+  @keyframes glow{
+    0%{box-shadow:0 0 0 0 rgba(0,168,150,.45);}
+    70%{box-shadow:0 0 0 10px rgba(0,168,150,0);}
+    100%{box-shadow:0 0 0 0 rgba(0,168,150,0);}
+  }
+  .node .dot{width:8px;height:8px;border-radius:50%;background:var(--ink-dim);}
+  .node.hot .dot{background:#fff;width:10px;height:10px;}
+  .node.warm .dot{background:var(--teal);}
+  .board-caption{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink-dim);
+    text-align:center;margin-top:-30px;margin-bottom:40px;}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:36px 0;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px 24px;}
+  .card h3{font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;
+    letter-spacing:.1em;color:var(--ink-dim);margin:0 0 10px;font-weight:500;}
+  .card p{margin:0;font-size:15px;line-height:1.55;}
+  .card.accent{background:var(--ink);color:var(--bg);}
+  .card.accent h3{color:#ffffff99;}
+
+  .section{margin:44px 0;}
+  .section h2{font-family:'Fraunces',serif;font-weight:700;font-size:26px;margin:0 0 18px;}
+
+  .principle{
+    display:flex;gap:16px;padding:16px 0;border-top:1px solid var(--line);align-items:flex-start;
+  }
+  .principle:first-of-type{border-top:none;}
+  .principle .num{
+    font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--teal);font-weight:600;
+    width:26px;flex-shrink:0;
+  }
+  .principle p{margin:0;font-size:14.5px;color:var(--ink-dim);line-height:1.55;}
+  .principle b{color:var(--ink);font-weight:600;}
+
+  .footer-strip{
+    margin-top:48px;padding:26px 28px;border-radius:18px;
+    background:linear-gradient(120deg,var(--teal),var(--cobalt));color:#fff;
+  }
+  .footer-strip .eyebrow2{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;opacity:.85;}
+  .footer-strip p{font-size:15px;margin:8px 0 0;line-height:1.5;max-width:560px;}
+
+  @media(max-width:600px){
+    h1{font-size:42px;}
+    .grid2{grid-template-columns:1fr;}
+    .board{grid-template-columns:repeat(4,1fr);}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">shared mission board</div>
+    <h1>TeamStream</h1>
+    <div class="tagline">Not a ticket system. A live map of where the mission's effort is right now — built for teams with no manager, only brothers.</div>
+  </header>
+
+  <div class="board">
+    <div class="node"><div class="dot"></div></div>
+    <div class="node hot"><div class="dot"></div></div>
+    <div class="node"><div class="dot"></div></div>
+    <div class="node warm"><div class="dot"></div></div>
+    <div class="node"><div class="dot"></div></div>
+    <div class="node"><div class="dot"></div></div>
+    <div class="node"><div class="dot"></div></div>
+    <div class="node"><div class="dot"></div></div>
+    <div class="node hot"><div class="dot"></div></div>
+    <div class="node"><div class="dot"></div></div>
+    <div class="node"><div class="dot"></div></div>
+    <div class="node"><div class="dot"></div></div>
+  </div>
+  <div class="board-caption">any button, pressed by anyone — hot = live now, warm = recently touched</div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>What it optimizes for</h3>
+      <p>Mission completion. <b>Not</b> individual accountability. It doesn't matter who finishes it.</p>
+    </div>
+    <div class="card accent">
+      <h3>The core unit</h3>
+      <p>The task is the durable object. People flow through it — ownership is fluid, not assigned.</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>How it actually works</h2>
+    <div class="principle">
+      <div class="num">01</div>
+      <p><b>Anyone can press any task.</b> No claiming, no "assign to me" step, no permission gate. Open access is the point.</p>
+    </div>
+    <div class="principle">
+      <div class="num">02</div>
+      <p><b>Pressed = highlighted.</b> Live at a glance across the whole board. Hover reveals who's on it, since when, and their last note — detail on demand, not by default.</p>
+    </div>
+    <div class="principle">
+      <div class="num">03</div>
+      <p><b>Multiple people on one task is convergence, not conflict.</b> Two brothers on the same wall means it breaks faster — the board shows it, never blocks it.</p>
+    </div>
+    <div class="principle">
+      <div class="num">04</div>
+      <p><b>Spaces roll every sprint.</b> A live snapshot of current mission state — not the permanent record.</p>
+    </div>
+    <div class="principle">
+      <div class="num">05</div>
+      <p><b>The archive underneath never rotates.</b> Debug breakthroughs and wall-breakers found in month 3 stay searchable in year 2, long after the sprint-space that produced them is gone.</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>The dashboard question</h2>
+    <div class="principle" style="border-top:none;padding-top:0;">
+      <p style="font-size:15px;">Not "who did what." <b style="color:var(--ink);">Where is our total effort concentrated, where's it thin, where's nothing happening despite being critical</b> — resource allocation across the whole team, including yourself. A campaign map, not a leaderboard.</p>
+    </div>
+  </div>
+
+  <div class="footer-strip">
+    <div class="eyebrow2">Who it's for</div>
+    <p>Small, high-trust, years-long-mission teams with no external manager imposing structure. Always a strongest link and a weakest one — both still brothers. Visibility exists to close ranks around whoever's stuck, never to rank or flag anyone.</p>
+  </div>
+</div>
+</body>
+</html>
