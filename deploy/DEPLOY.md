@@ -48,12 +48,15 @@ git push
 
 ## Step 2 — Clone the repo onto the Linux box
 
-Create the install dir as a git clone (adjust the URL if you use SSH):
+Create the install dir as a git clone, owned by your own login — **not**
+`root` — so future `git pull` redeploys never need sudo (adjust the URL if
+you use SSH):
 
 ```bash
 sudo mkdir -p /opt/teamstream
 sudo chown "$(whoami)" /opt/teamstream
 git clone https://github.com/shayaandanishansari/teamstream /opt/teamstream
+#   already cloned earlier?  ->  cd /opt/teamstream && git pull
 ```
 
 `/opt/teamstream/backend/` now has `pb_public/`, `pb_migrations/`, and
@@ -77,7 +80,7 @@ wget https://github.com/pocketbase/pocketbase/releases/download/v0.39.9/pocketba
 # --- or arm64: ---
 # wget https://github.com/pocketbase/pocketbase/releases/download/v0.39.9/pocketbase_0.39.9_linux_arm64.zip
 
-unzip pocketbase_0.39.9_linux_*.zip pocketbase
+unzip -o pocketbase_0.39.9_linux_*.zip pocketbase
 chmod +x pocketbase
 rm pocketbase_0.39.9_linux_*.zip
 ```
