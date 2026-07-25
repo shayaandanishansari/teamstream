@@ -19,9 +19,10 @@ backend/pocketbase.exe
 # data must NEVER be committed (it also contains superuser credentials).
 backend/pb_data/
 
-# Build artifact: the compiled Flutter web app, produced on demand by
-# scripts/build-web.ps1 (shipped to the box via scp, not via git).
-backend/pb_public/
+# NOTE: backend/pb_public/ (the built Flutter web app) IS tracked on purpose —
+# the always-on Linux box has no Flutter to build it, so it receives the
+# frontend via `git pull`. Rebuild with scripts/build-web.ps1 and commit the
+# result whenever the app changes.
 
 # PocketBase's own distribution docs (shipped alongside the binary).
 backend/CHANGELOG.md
