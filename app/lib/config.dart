@@ -22,3 +22,8 @@ const String _pbUrlOverride = String.fromEnvironment('PB_URL');
 final String kPocketBaseUrl = _pbUrlOverride.isNotEmpty
     ? _pbUrlOverride
     : (kIsWeb ? Uri.base.origin : 'https://teamstream.shayaandanishansari.com');
+
+/// Per-file attachment ceiling. Must match `maxSize` on the `file` field in
+/// `backend/pb_migrations/1721700300_add_attachments.js` — checked on the client
+/// too, so an oversized pick is refused with a sentence instead of a 400.
+const int kMaxAttachmentBytes = 20 * 1024 * 1024;

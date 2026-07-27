@@ -1,7 +1,10 @@
 import 'dart:async';
+import 'dart:typed_data';
 
+import 'package:http/http.dart' as http;
 import 'package:pocketbase/pocketbase.dart';
 
+import '../models/attachment.dart';
 import '../models/member.dart';
 import '../models/work.dart';
 import '../models/task.dart';
@@ -82,6 +85,21 @@ class PocketBaseRepo implements TeamStreamRepo {
     );
   }
 
+  Attachment _attachment(RecordModel r) {
+    final stored = r.getStringValue('file');
+    return Attachment(
+      id: r.id,
+      taskId: r.getStringValue('task'),
+      memberId: r.getStringValue('member'),
+      name: r.getStringValue('name'),
+      url: stored.isEmpty ? '' : pb.files.getURL(r, stored).toString(),
+      thumbUrl:
+          stored.isEmpty ? '' : pb.files.getURL(r, stored, thumb: '240x240').toString(),
+      size: r.getIntValue('size'),
+      created: _date(r.getStringValue('created')) ?? DateTime.now(),
+    );
+  }
+
   /// Initial full fetch, then re-fetch on any realtime event for the collection.
   Stream<List<T>> _watch<T>(String collection, T Function(RecordModel) map) {
     late StreamController<List<T>> controller;
@@ -154,6 +172,9 @@ class PocketBaseRepo implements TeamStreamRepo {
 
   @override
   Stream<List<CalendarEvent>> watchEvents() => _watch('events', _event);
+
+  @override
+  Stream<List<Attachment>> watchAttachments() => _watch('attachments', _attachment);
 
   /// Toggles already in flight, keyed by "task/member". The toggle is a
   /// read-then-write, so without this a fast double-tap has both taps read
@@ -255,6 +276,31 @@ class PocketBaseRepo implements TeamStreamRepo {
   Future<void> setTaskCritical(String taskId, bool critical) async {
     await pb.collection('tasks').update(taskId,
         body: {'critical': critical}, headers: _actorHeaders);
+  }
+
+  @override
+  Future<Attachment> addAttachment({
+    required String taskId,
+    required String memberId,
+    required String filename,
+    required Uint8List bytes,
+  }) async {
+    final r = await pb.collection('attachments').create(
+      body: {
+        'task': taskId,
+        'member': memberId,
+        'name': filename,
+        'size': bytes.length,
+      },
+      files: [http.MultipartFile.fromBytes('file', bytes, filename: filename)],
+      headers: _actorHeaders,
+    );
+    return _attachment(r);
+  }
+
+  @override
+  Future<void> deleteAttachment(String attachmentId) async {
+    await pb.collection('attachments').delete(attachmentId, headers: _actorHeaders);
   }
 
   @override

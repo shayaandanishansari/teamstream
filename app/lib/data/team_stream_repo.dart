@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+
+import '../models/attachment.dart';
 import '../models/member.dart';
 import '../models/work.dart';
 import '../models/task.dart';
@@ -29,6 +32,7 @@ abstract class TeamStreamRepo {
   Stream<List<Task>> watchTasks();
   Stream<List<TimeEntry>> watchTimeEntries();
   Stream<List<CalendarEvent>> watchEvents();
+  Stream<List<Attachment>> watchAttachments();
 
   /// Toggle THIS member's timer on a task: stop their open entry if one exists,
   /// otherwise start a new one. Independent of anyone else's timers.
@@ -47,6 +51,17 @@ abstract class TeamStreamRepo {
   Future<void> updateTaskNote(String taskId, String note);
   Future<void> setTaskDueDate(String taskId, DateTime? due);
   Future<void> setTaskCritical(String taskId, bool critical);
+
+  /// Upload a file against a task, credited to [memberId]. Bytes rather than a
+  /// path because web has no filesystem to hand out paths from.
+  Future<Attachment> addAttachment({
+    required String taskId,
+    required String memberId,
+    required String filename,
+    required Uint8List bytes,
+  });
+
+  Future<void> deleteAttachment(String attachmentId);
 
   Future<CalendarEvent> createEvent({
     required String title,

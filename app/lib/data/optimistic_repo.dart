@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:typed_data';
 
+import '../models/attachment.dart';
 import '../models/member.dart';
 import '../models/work.dart';
 import '../models/task.dart';
@@ -30,6 +32,7 @@ class OptimisticRepo implements TeamStreamRepo {
   late final _tasks = _Layer<Task>(_inner.watchTasks, (t) => t.id);
   late final _entries = _Layer<TimeEntry>(_inner.watchTimeEntries, (e) => e.id);
   late final _events = _Layer<CalendarEvent>(_inner.watchEvents, (e) => e.id);
+  late final _attachments = _Layer<Attachment>(_inner.watchAttachments, (a) => a.id);
 
   int _tmp = 0;
   String _tempId() => 'tmp_${++_tmp}';
@@ -83,6 +86,9 @@ class OptimisticRepo implements TeamStreamRepo {
 
   @override
   Stream<List<CalendarEvent>> watchEvents() => _events.stream;
+
+  @override
+  Stream<List<Attachment>> watchAttachments() => _attachments.stream;
 
   // ---- writes ----
 
@@ -162,18 +168,25 @@ class OptimisticRepo implements TeamStreamRepo {
       for (final e in _entries.view)
         if (e.taskId == taskId) e.id
     ];
+    final fileIds = [
+      for (final a in _attachments.view)
+        if (a.taskId == taskId) a.id
+    ];
     _tasks.remove(taskId);
     _entries.removeAll(entryIds);
+    _attachments.removeAll(fileIds);
 
     await _send(
       () => _inner.deleteTask(taskId),
       settle: () {
         _tasks.settle([taskId]);
         _entries.settle(entryIds);
+        _attachments.settle(fileIds);
       },
       rollback: () {
         _tasks.rollback([taskId]);
         _entries.rollback(entryIds);
+        _attachments.rollback(fileIds);
       },
     );
   }
@@ -188,9 +201,14 @@ class OptimisticRepo implements TeamStreamRepo {
       for (final e in _entries.view)
         if (taskIds.contains(e.taskId)) e.id
     ];
+    final fileIds = [
+      for (final a in _attachments.view)
+        if (taskIds.contains(a.taskId)) a.id
+    ];
     _works.remove(workId);
     _tasks.removeAll(taskIds);
     _entries.removeAll(entryIds);
+    _attachments.removeAll(fileIds);
 
     await _send(
       () => _inner.deleteWork(workId),
@@ -198,11 +216,13 @@ class OptimisticRepo implements TeamStreamRepo {
         _works.settle([workId]);
         _tasks.settle(taskIds);
         _entries.settle(entryIds);
+        _attachments.settle(fileIds);
       },
       rollback: () {
         _works.rollback([workId]);
         _tasks.rollback(taskIds);
         _entries.rollback(entryIds);
+        _attachments.rollback(fileIds);
       },
     );
   }
@@ -287,6 +307,57 @@ class OptimisticRepo implements TeamStreamRepo {
     return saved ?? temp;
   }
 
+  @override
+  Future<Attachment> addAttachment({
+    required String taskId,
+    required String memberId,
+    required String filename,
+    required Uint8List bytes,
+  }) async {
+    // Uploads are the one write where "instant" is a promise we can't keep —
+    // the bytes still have to cross the wire. The placeholder goes in anyway so
+    // the row appears immediately, marked as in-flight, instead of the tap
+    // seeming to do nothing until the transfer finishes.
+    final temp = Attachment.pending(
+      id: _tempId(),
+      taskId: taskId,
+      memberId: memberId,
+      name: filename,
+      bytes: bytes,
+    );
+    _attachments.upsert(temp);
+
+    final saved = await _send(
+      () => _inner.addAttachment(
+        taskId: taskId,
+        memberId: memberId,
+        filename: filename,
+        bytes: bytes,
+      ),
+      settle: () => _attachments.settle([temp.id]),
+      rollback: () => _attachments.rollback([temp.id]),
+    );
+    // Swap placeholder for the real record as soon as the server acks, instead
+    // of leaving it spinning until the realtime snapshot completes the round
+    // trip. Settled, so the overlay copy is dropped once that snapshot lands.
+    if (saved != null) {
+      _attachments.rollback([temp.id]);
+      _attachments.upsert(saved);
+      _attachments.settle([saved.id]);
+    }
+    return saved ?? temp;
+  }
+
+  @override
+  Future<void> deleteAttachment(String attachmentId) async {
+    _attachments.remove(attachmentId);
+    await _send(
+      () => _inner.deleteAttachment(attachmentId),
+      settle: () => _attachments.settle([attachmentId]),
+      rollback: () => _attachments.rollback([attachmentId]),
+    );
+  }
+
   // ---- straight delegation ----
 
   @override
@@ -314,6 +385,7 @@ class OptimisticRepo implements TeamStreamRepo {
     _tasks.dispose();
     _entries.dispose();
     _events.dispose();
+    _attachments.dispose();
     _pending.close();
     _errors.close();
     _inner.dispose();

@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:teamstream/data/optimistic_repo.dart';
 import 'package:teamstream/data/team_stream_repo.dart';
+import 'package:teamstream/models/attachment.dart';
 import 'package:teamstream/models/event.dart';
 import 'package:teamstream/models/member.dart';
 import 'package:teamstream/models/task.dart';
@@ -16,6 +18,7 @@ class FakeRepo implements TeamStreamRepo {
   final tasks = StreamController<List<Task>>.broadcast();
   final works = StreamController<List<Work>>.broadcast();
   final events = StreamController<List<CalendarEvent>>.broadcast();
+  final attachments = StreamController<List<Attachment>>.broadcast();
 
   /// Completes the next write. Tests resolve or reject it explicitly.
   Completer<void>? gate;
@@ -34,6 +37,30 @@ class FakeRepo implements TeamStreamRepo {
   Stream<List<Work>> watchWorks() => works.stream;
   @override
   Stream<List<CalendarEvent>> watchEvents() => events.stream;
+  @override
+  Stream<List<Attachment>> watchAttachments() => attachments.stream;
+
+  @override
+  Future<Attachment> addAttachment({
+    required String taskId,
+    required String memberId,
+    required String filename,
+    required Uint8List bytes,
+  }) async {
+    await _gated();
+    return Attachment(
+      id: 'server-file',
+      taskId: taskId,
+      memberId: memberId,
+      name: filename,
+      url: 'https://example.test/$filename',
+      size: bytes.length,
+      created: DateTime.now(),
+    );
+  }
+
+  @override
+  Future<void> deleteAttachment(String attachmentId) => _gated();
 
   @override
   Future<void> toggleTimer({required String taskId, required String memberId}) {
@@ -93,15 +120,20 @@ void main() {
   late OptimisticRepo repo;
   late List<List<TimeEntry>> seenEntries;
   late List<List<Task>> seenTasks;
+  late List<List<Attachment>> seenFiles;
 
   setUp(() {
     fake = FakeRepo();
     repo = OptimisticRepo(fake);
     seenEntries = [];
     seenTasks = [];
+    seenFiles = [];
     repo.watchTimeEntries().listen(seenEntries.add);
     repo.watchTasks().listen(seenTasks.add);
+    repo.watchAttachments().listen(seenFiles.add);
   });
+
+  final someBytes = Uint8List.fromList([1, 2, 3, 4]);
 
   /// Lets pending microtasks and stream events settle.
   Future<void> pump() => Future<void>.delayed(Duration.zero);
@@ -215,6 +247,108 @@ void main() {
     expect(seenTasks.last, isEmpty);
     expect(seenEntries.last, hasLength(1), reason: "the other task's entry is untouched");
     expect(seenEntries.last.single.id, 'e2');
+  });
+
+  test('an upload shows up right away, flagged as still in flight', () async {
+    fake.attachments.add(const []);
+    await pump();
+
+    unawaited(repo.addAttachment(
+      taskId: 'task1',
+      memberId: 'me',
+      filename: 'whiteboard.png',
+      bytes: someBytes,
+    ));
+    await pump();
+
+    expect(fake.gate!.isCompleted, isFalse, reason: 'the bytes are still crossing the wire');
+    expect(seenFiles.last, hasLength(1));
+    expect(seenFiles.last.single.uploading, isTrue);
+    expect(seenFiles.last.single.name, 'whiteboard.png');
+    expect(seenFiles.last.single.localBytes, isNotNull,
+        reason: 'images preview from memory while uploading');
+  });
+
+  test('a non-image upload does not park its bytes in memory', () async {
+    fake.attachments.add(const []);
+    await pump();
+
+    unawaited(repo.addAttachment(
+      taskId: 'task1',
+      memberId: 'me',
+      filename: 'spec.pdf',
+      bytes: someBytes,
+    ));
+    await pump();
+
+    expect(seenFiles.last.single.localBytes, isNull);
+    expect(seenFiles.last.single.isImage, isFalse);
+  });
+
+  test('the placeholder is replaced by the real file, not joined by it', () async {
+    fake.attachments.add(const []);
+    await pump();
+
+    unawaited(repo.addAttachment(
+      taskId: 'task1',
+      memberId: 'me',
+      filename: 'whiteboard.png',
+      bytes: someBytes,
+    ));
+    await pump();
+
+    fake.gate!.complete();
+    await pump();
+
+    expect(seenFiles.last, hasLength(1), reason: 'placeholder swapped out, not duplicated');
+    expect(seenFiles.last.single.id, 'server-file');
+    expect(seenFiles.last.single.uploading, isFalse,
+        reason: 'the spinner should clear on the ack, not on the next snapshot');
+
+    // The realtime snapshot finally lands with the same record.
+    fake.attachments.add([seenFiles.last.single]);
+    await pump();
+    expect(seenFiles.last, hasLength(1));
+  });
+
+  test('a failed upload leaves nothing behind', () async {
+    fake.attachments.add(const []);
+    await pump();
+
+    final errors = <Object>[];
+    repo.writeErrors.listen(errors.add);
+
+    unawaited(repo.addAttachment(
+      taskId: 'task1',
+      memberId: 'me',
+      filename: 'whiteboard.png',
+      bytes: someBytes,
+    ));
+    await pump();
+    expect(seenFiles.last, hasLength(1));
+
+    fake.gate!.completeError(Exception('upload died'));
+    await pump();
+
+    expect(seenFiles.last, isEmpty);
+    expect(errors, hasLength(1));
+  });
+
+  test('deleting a task also clears its attachments', () async {
+    fake.tasks.add([Task(id: 'task1', workId: 'w1', title: 'x')]);
+    fake.attachments.add([
+      Attachment(
+          id: 'a1', taskId: 'task1', memberId: 'me', name: 'a.png', created: DateTime.now()),
+      Attachment(
+          id: 'a2', taskId: 'other', memberId: 'me', name: 'b.png', created: DateTime.now()),
+    ]);
+    await pump();
+
+    unawaited(repo.deleteTask('task1'));
+    await pump();
+
+    expect(seenFiles.last, hasLength(1), reason: "the other task's file is untouched");
+    expect(seenFiles.last.single.id, 'a2');
   });
 
   test('task edits apply immediately and revert on failure', () async {

@@ -214,6 +214,18 @@ behavior predictable and picks up hook changes.)
   (`shayaan@teamstream.local`) — users never see it. Honest limit: shared
   password = no per-person accountability, and if it leaks you rotate it for all
   three (admin dashboard → members). Verified locally end-to-end before ship.
+- **Attachment FILES are the one exception to that gate.** The `attachments`
+  *records* need auth like everything else, but the file bytes are served
+  unauthenticated at `/api/files/...` — deliberately, because a protected file
+  needs a short-lived token on every request and image previews would go blank
+  the moment it expired. The URLs carry a random record id plus a randomised
+  filename suffix, so they're unguessable, but anyone *handed* one can open it
+  without logging in. Treat a pasted file link like a pasted file.
+- **Uploads live in `pb_data/storage/`.** Any backup that only copies
+  `data.db` will restore a board full of broken images. Back up all of
+  `pb_data/`. Per-file cap is 20 MB, set in both the migration and
+  `app/lib/config.dart` — raise them together or the client will accept a file
+  the server then rejects.
 - **Realtime through the tunnel:** PocketBase realtime is SSE over HTTP —
   Cloudflare passes it through fine, so live "hot task" updates work remotely.
 - **App URL is auto-resolving:** the web app talks to whatever origin served it

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pocketbase/pocketbase.dart';
 
 import '../config.dart';
+import '../models/attachment.dart';
 import '../models/member.dart';
 import '../models/work.dart';
 import '../models/task.dart';
@@ -57,6 +58,9 @@ final timeEntriesProvider =
 
 final eventsProvider =
     StreamProvider<List<CalendarEvent>>((ref) => ref.watch(repoProvider).watchEvents());
+
+final attachmentsProvider =
+    StreamProvider<List<Attachment>>((ref) => ref.watch(repoProvider).watchAttachments());
 
 /// Ticks once a second so live timers re-render.
 final clockProvider = StreamProvider<DateTime>((ref) async* {
