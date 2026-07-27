@@ -17,5 +17,15 @@ class TimeEntry {
 
   bool get isLive => endedAt == null;
 
+  /// This entry, closed at [at]. Used for the optimistic "stop" before the
+  /// server has confirmed it.
+  TimeEntry stopped(DateTime at) => TimeEntry(
+        id: id,
+        taskId: taskId,
+        memberId: memberId,
+        startedAt: startedAt,
+        endedAt: at,
+      );
+
   Duration durationAsOf(DateTime now) => (endedAt ?? now).difference(startedAt);
 }

@@ -8,6 +8,7 @@ import '../models/task.dart';
 import '../models/time_entry.dart';
 import '../models/event.dart';
 import '../identity/identity.dart';
+import 'optimistic_repo.dart';
 import 'pocketbase_repo.dart';
 import 'team_stream_repo.dart';
 
@@ -23,11 +24,24 @@ final pocketBaseProvider = Provider<PocketBase>((ref) {
   return PocketBase(kPocketBaseUrl, authStore: store);
 });
 
-final repoProvider = Provider<TeamStreamRepo>((ref) {
-  final repo = PocketBaseRepo(ref.watch(pocketBaseProvider));
+/// PocketBase behind the optimistic layer. Disposing this disposes the inner
+/// repo too. Exposed separately from [repoProvider] so the UI can read write
+/// status without that leaking into the swappable [TeamStreamRepo] seam.
+final optimisticRepoProvider = Provider<OptimisticRepo>((ref) {
+  final repo = OptimisticRepo(PocketBaseRepo(ref.watch(pocketBaseProvider)));
   ref.onDispose(repo.dispose);
   return repo;
 });
+
+final repoProvider = Provider<TeamStreamRepo>((ref) => ref.watch(optimisticRepoProvider));
+
+/// Number of writes currently in the air — 0 once everything has landed.
+final pendingWritesProvider =
+    StreamProvider<int>((ref) => ref.watch(optimisticRepoProvider).pendingWrites);
+
+/// Fires when a write failed and its optimistic change was rolled back.
+final writeErrorsProvider =
+    StreamProvider<Object>((ref) => ref.watch(optimisticRepoProvider).writeErrors);
 
 final membersProvider =
     FutureProvider<List<Member>>((ref) => ref.watch(repoProvider).fetchMembers());

@@ -60,6 +60,38 @@ class _AppShellState extends ConsumerState<AppShell> {
     final me = _me(ref);
     final wide = MediaQuery.of(context).size.width >= 720;
 
+    // Writes apply instantly and reconcile in the background. If one fails it's
+    // rolled back silently, so say so — otherwise a change just quietly undoes
+    // itself.
+    ref.listen(writeErrorsProvider, (_, next) {
+      final err = next.asData?.value;
+      if (err == null || !mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: AppColors.ink,
+          behavior: SnackBarBehavior.floating,
+          content: const Text("Couldn't save that — the change was undone."),
+          action: SnackBarAction(
+            label: 'Details',
+            textColor: AppColors.tealSoft,
+            onPressed: () => showDialog<void>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                backgroundColor: AppColors.card,
+                title: Text('Write failed', style: displayFont(size: 18)),
+                content: Text('$err', style: monoFont(size: 11)),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    });
+
+    final pending = ref.watch(pendingWritesProvider).asData?.value ?? 0;
+
     final appBar = AppBar(
       backgroundColor: AppColors.bg,
       elevation: 0,
@@ -67,6 +99,8 @@ class _AppShellState extends ConsumerState<AppShell> {
       title: Row(
         children: [
           Text('TeamStream', style: displayFont(size: 24, weight: FontWeight.w900)),
+          const SizedBox(width: 10),
+          _SyncDot(active: pending > 0),
           const Spacer(),
           if (me != null)
             _MeChip(member: me, onTap: () => ref.read(identityProvider.notifier).logout()),
@@ -116,6 +150,31 @@ class _AppShellState extends ConsumerState<AppShell> {
           for (final d in _destinations)
             NavigationDestination(icon: Icon(d.icon), label: d.label),
         ],
+      ),
+    );
+  }
+}
+
+/// Quiet "still saving" tell. Deliberately small and off to the side: the
+/// change is already on screen, so this only answers "did it reach the box?"
+/// A blocking spinner would defeat the point of applying the change early.
+class _SyncDot extends StatelessWidget {
+  final bool active;
+  const _SyncDot({required this.active});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedOpacity(
+      opacity: active ? 1 : 0,
+      duration: const Duration(milliseconds: 220),
+      child: SizedBox(
+        width: 12,
+        height: 12,
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          valueColor: const AlwaysStoppedAnimation(AppColors.teal),
+          backgroundColor: AppColors.line,
+        ),
       ),
     );
   }
