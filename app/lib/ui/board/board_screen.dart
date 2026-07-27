@@ -227,10 +227,27 @@ class _TaskTile extends ConsumerWidget {
     }
     final myElapsed = myLive?.durationAsOf(now);
 
+    // Time banked on this task by the whole team. Live entries keep counting
+    // into it, so the total never jumps when someone stops their timer.
+    var total = Duration.zero;
+    for (final e in entries) {
+      total += e.durationAsOf(now);
+    }
+
+    // Everyone who has EVER logged time here, in first-touch order. These dots
+    // persist after a timer stops, so "I worked on this" outlives the session.
+    final liveMemberIds = {for (final e in live) e.memberId};
+    final contributors = <String>[];
+    for (final e in entries) {
+      if (!contributors.contains(e.memberId)) contributors.add(e.memberId);
+    }
+
     late Color bg;
     late Color fg;
     if (task.isDone) {
-      bg = AppColors.tealSoft.withValues(alpha: 0.35);
+      // Recedes into the page. Teal is reserved for effort, so a done task
+      // reads as finished rather than as a faint version of "worked on".
+      bg = AppColors.bg;
       fg = AppColors.inkDim;
     } else if (hot) {
       bg = AppColors.teal;
@@ -296,27 +313,45 @@ class _TaskTile extends ConsumerWidget {
                 ],
               ),
             ),
-            if (live.isNotEmpty)
+            if (contributors.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    for (final e in live)
+                    for (final id in contributors)
                       Padding(
                         padding: const EdgeInsets.only(left: 3),
                         child: _Dot(
-                          color: hexToColor(membersById[e.memberId]?.color ?? '#00A896'),
-                          ring: hot,
+                          color: hexToColor(membersById[id]?.color ?? '#00A896'),
+                          ring: liveMemberIds.contains(id),
+                          faded: !liveMemberIds.contains(id),
                         ),
                       ),
                   ],
                 ),
               ),
-            if (myElapsed != null)
+            if (myElapsed != null || total > Duration.zero)
               Padding(
                 padding: const EdgeInsets.only(left: 4),
-                child: Text(fmtDuration(myElapsed), style: monoFont(size: 12, color: fg)),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    // My live timer, ticking.
+                    if (myElapsed != null)
+                      Text(fmtDuration(myElapsed), style: monoFont(size: 12, color: fg)),
+                    // Everything banked on this task — survives stopping.
+                    if (total > Duration.zero)
+                      Text(
+                        fmtTotal(total),
+                        style: monoFont(
+                          size: myElapsed != null ? 10 : 12,
+                          color: fg.withValues(alpha: myElapsed != null ? 0.6 : 0.85),
+                        ),
+                      ),
+                  ],
+                ),
               )
             else if (!task.isDone)
               Icon(Icons.play_arrow_rounded, color: fg.withValues(alpha: 0.45), size: 20),
@@ -336,7 +371,11 @@ class _TaskTile extends ConsumerWidget {
 class _Dot extends StatelessWidget {
   final Color color;
   final bool ring;
-  const _Dot({required this.color, required this.ring});
+
+  /// Dimmed = this member has logged time here but isn't running right now.
+  final bool faded;
+
+  const _Dot({required this.color, required this.ring, this.faded = false});
 
   @override
   Widget build(BuildContext context) {
@@ -344,7 +383,7 @@ class _Dot extends StatelessWidget {
       width: 12,
       height: 12,
       decoration: BoxDecoration(
-        color: color,
+        color: faded ? color.withValues(alpha: 0.45) : color,
         shape: BoxShape.circle,
         border: ring ? Border.all(color: Colors.white, width: 1.5) : null,
       ),

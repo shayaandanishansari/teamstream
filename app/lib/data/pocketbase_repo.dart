@@ -155,28 +155,40 @@ class PocketBaseRepo implements TeamStreamRepo {
   @override
   Stream<List<CalendarEvent>> watchEvents() => _watch('events', _event);
 
+  /// Toggles already in flight, keyed by "task/member". The toggle is a
+  /// read-then-write, so without this a fast double-tap has both taps read
+  /// "no open entry" and both create one — leaving a second timer running
+  /// invisibly until someone taps again.
+  final _togglesInFlight = <String>{};
+
   @override
   Future<void> toggleTimer({required String taskId, required String memberId}) async {
-    final existing = await pb.collection('time_entries').getFullList(
-          filter: 'task="$taskId" && member="$memberId"',
-        );
-    RecordModel? open;
-    for (final r in existing) {
-      if (r.getStringValue('ended_at').isEmpty) {
-        open = r;
-        break;
+    final key = '$taskId/$memberId';
+    if (!_togglesInFlight.add(key)) return; // a toggle for this pair is mid-air
+    try {
+      final existing = await pb.collection('time_entries').getFullList(
+            filter: 'task="$taskId" && member="$memberId"',
+          );
+      final open = existing.where((r) => r.getStringValue('ended_at').isEmpty).toList();
+
+      if (open.isNotEmpty) {
+        // Close ALL of my open entries on this task, not just the first. If a
+        // duplicate ever slipped through, this is what cleans it up.
+        final endedAt = _iso(DateTime.now());
+        for (final r in open) {
+          await pb.collection('time_entries').update(r.id,
+              body: {'ended_at': endedAt}, headers: _actorHeaders);
+        }
+      } else {
+        await pb.collection('time_entries').create(body: {
+          'task': taskId,
+          'member': memberId,
+          'started_at': _iso(DateTime.now()),
+          'ended_at': '',
+        }, headers: _actorHeaders);
       }
-    }
-    if (open != null) {
-      await pb.collection('time_entries').update(open.id,
-          body: {'ended_at': _iso(DateTime.now())}, headers: _actorHeaders);
-    } else {
-      await pb.collection('time_entries').create(body: {
-        'task': taskId,
-        'member': memberId,
-        'started_at': _iso(DateTime.now()),
-        'ended_at': '',
-      }, headers: _actorHeaders);
+    } finally {
+      _togglesInFlight.remove(key);
     }
   }
 

@@ -63,11 +63,20 @@ Color hexToColor(String hex) {
   return Color(int.tryParse(h, radix: 16) ?? 0xFF00A896);
 }
 
-/// mm:ss, or hh:mm:ss once past an hour.
+/// mm:ss, or hh:mm:ss once past an hour. For a LIVE, ticking timer.
 String fmtDuration(Duration d) {
   String two(int n) => n.toString().padLeft(2, '0');
   final h = d.inHours;
   final m = d.inMinutes % 60;
   final s = d.inSeconds % 60;
   return h > 0 ? '${two(h)}:${two(m)}:${two(s)}' : '${two(m)}:${two(s)}';
+}
+
+/// Compact accumulated total — "45s", "17m", "2h", "1h 20m". For time already
+/// banked on a task, where second-by-second precision is just noise.
+String fmtTotal(Duration d) {
+  if (d.inMinutes < 1) return '${d.inSeconds}s';
+  if (d.inHours < 1) return '${d.inMinutes}m';
+  final m = d.inMinutes % 60;
+  return m == 0 ? '${d.inHours}h' : '${d.inHours}h ${m}m';
 }
