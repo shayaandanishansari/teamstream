@@ -985,6 +985,11 @@ class _TaskMenu extends ConsumerWidget {
       icon: Icon(Icons.more_vert, size: 18, color: color.withValues(alpha: 0.7)),
       onSelected: (v) async {
         switch (v) {
+          case 'rename':
+            final t = await promptText(context, title: 'Rename task', initial: task.title);
+            if (t != null && t.trim().isNotEmpty && t.trim() != task.title) {
+              await repo.renameTask(task.id, t.trim());
+            }
           case 'done':
             await repo.setTaskDone(task.id, !task.isDone);
           case 'critical':
@@ -1007,6 +1012,7 @@ class _TaskMenu extends ConsumerWidget {
         }
       },
       itemBuilder: (_) => [
+        const PopupMenuItem(value: 'rename', child: Text('Rename')),
         PopupMenuItem(value: 'done', child: Text(task.isDone ? 'Mark not done' : 'Mark done')),
         PopupMenuItem(
             value: 'critical', child: Text(task.critical ? 'Unmark critical' : 'Mark critical')),
@@ -1032,17 +1038,25 @@ class _WorkMenu extends ConsumerWidget {
     return PopupMenuButton<String>(
       icon: const Icon(Icons.more_horiz, size: 20, color: AppColors.inkDim),
       onSelected: (v) async {
-        if (v == 'delete') {
-          final ok = await confirmDialog(
-            context,
-            title: 'Delete Work?',
-            message:
-                'Permanently deletes "${work.title}" and everything inside it — all its tasks, their tracked time and their files. This cannot be undone.',
-          );
-          if (ok) await ref.read(repoProvider).deleteWork(work.id);
+        switch (v) {
+          case 'rename':
+            final t = await promptText(context, title: 'Rename Work', initial: work.title);
+            if (t != null && t.trim().isNotEmpty && t.trim() != work.title) {
+              await ref.read(repoProvider).renameWork(work.id, t.trim());
+            }
+          case 'delete':
+            final ok = await confirmDialog(
+              context,
+              title: 'Delete Work?',
+              message:
+                  'Permanently deletes "${work.title}" and everything inside it — all its tasks, their tracked time and their files. This cannot be undone.',
+            );
+            if (ok) await ref.read(repoProvider).deleteWork(work.id);
         }
       },
       itemBuilder: (_) => const [
+        PopupMenuItem(value: 'rename', child: Text('Rename Work')),
+        PopupMenuDivider(),
         PopupMenuItem(
           value: 'delete',
           child: Text('Delete Work', style: TextStyle(color: Color(0xFFE05555))),

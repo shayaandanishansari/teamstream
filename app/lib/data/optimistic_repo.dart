@@ -228,6 +228,31 @@ class OptimisticRepo implements TeamStreamRepo {
   }
 
   @override
+  Future<void> renameWork(String workId, String title) async {
+    Work? current;
+    for (final w in _works.view) {
+      if (w.id == workId) {
+        current = w;
+        break;
+      }
+    }
+    if (current != null) _works.upsert(current.copyWith(title: title));
+
+    await _send(
+      () => _inner.renameWork(workId, title),
+      settle: () => _works.settle([workId]),
+      rollback: () => _works.rollback([workId]),
+    );
+  }
+
+  @override
+  Future<void> renameTask(String taskId, String title) => _patchTask(
+        taskId,
+        (t) => t.copyWith(title: title),
+        () => _inner.renameTask(taskId, title),
+      );
+
+  @override
   Future<void> setTaskDone(String taskId, bool done) => _patchTask(
         taskId,
         (t) => t.copyWith(isDone: done, doneAt: done ? DateTime.now() : null),

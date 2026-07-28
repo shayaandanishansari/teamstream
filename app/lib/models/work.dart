@@ -12,4 +12,11 @@ class Work {
     this.position = 0,
     this.archived = false,
   });
+
+  Work copyWith({String? title, double? position, bool? archived}) => Work(
+        id: id,
+        title: title ?? this.title,
+        position: position ?? this.position,
+        archived: archived ?? this.archived,
+      );
 }

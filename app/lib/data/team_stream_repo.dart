@@ -46,6 +46,9 @@ abstract class TeamStreamRepo {
   Future<void> deleteTask(String taskId);
   Future<void> deleteWork(String workId);
 
+  Future<void> renameWork(String workId, String title);
+  Future<void> renameTask(String taskId, String title);
+
   Future<void> setTaskDone(String taskId, bool done);
   Future<void> setTaskArchived(String taskId, bool archived);
   Future<void> updateTaskNote(String taskId, String note);

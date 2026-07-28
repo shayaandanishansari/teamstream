@@ -72,6 +72,12 @@ class FakeRepo implements TeamStreamRepo {
   Future<void> setTaskDone(String taskId, bool done) => _gated();
 
   @override
+  Future<void> renameWork(String workId, String title) => _gated();
+
+  @override
+  Future<void> renameTask(String taskId, String title) => _gated();
+
+  @override
   Future<void> deleteTask(String taskId) => _gated();
 
   // ---- unused by these tests ----
@@ -363,5 +369,37 @@ void main() {
     fake.gate!.completeError(Exception('nope'));
     await pump();
     expect(seenTasks.last.single.isDone, isFalse, reason: 'reverted');
+  });
+
+  test('renaming a task shows the new title before the server replies', () async {
+    fake.tasks.add([Task(id: 'task1', workId: 'w1', title: 'old')]);
+    await pump();
+
+    unawaited(repo.renameTask('task1', 'new'));
+    await pump();
+
+    expect(fake.gate!.isCompleted, isFalse);
+    expect(seenTasks.last.single.title, 'new');
+
+    fake.gate!.completeError(Exception('nope'));
+    await pump();
+    expect(seenTasks.last.single.title, 'old', reason: 'reverted');
+  });
+
+  test('renaming a Work shows the new title before the server replies', () async {
+    final seenWorks = <List<Work>>[];
+    repo.watchWorks().listen(seenWorks.add);
+    fake.works.add([const Work(id: 'w1', title: 'old')]);
+    await pump();
+
+    unawaited(repo.renameWork('w1', 'new'));
+    await pump();
+
+    expect(fake.gate!.isCompleted, isFalse);
+    expect(seenWorks.last.single.title, 'new');
+
+    fake.gate!.completeError(Exception('nope'));
+    await pump();
+    expect(seenWorks.last.single.title, 'old', reason: 'reverted');
   });
 }

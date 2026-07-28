@@ -248,6 +248,18 @@ class PocketBaseRepo implements TeamStreamRepo {
   }
 
   @override
+  Future<void> renameWork(String workId, String title) async {
+    await pb.collection('works').update(workId,
+        body: {'title': title}, headers: _actorHeaders);
+  }
+
+  @override
+  Future<void> renameTask(String taskId, String title) async {
+    await pb.collection('tasks').update(taskId,
+        body: {'title': title}, headers: _actorHeaders);
+  }
+
+  @override
   Future<void> setTaskDone(String taskId, bool done) async {
     await pb.collection('tasks').update(taskId, body: {
       'is_done': done,
