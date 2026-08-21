@@ -309,8 +309,22 @@ delete by accident:
   `start_url`, and the old manifest used `"."` — so the phones would keep a dead
   icon and install a second one. The old icons are copied across as insurance.
 
-On each phone: open the app, check the build stamp in the top-right matches
-`git rev-parse --short HEAD`, and confirm the timer still runs.
+On each phone: open the app, check the build stamp in the top-right, and
+confirm the timer still runs.
+
+**The stamp is the commit the build was made FROM, so it is the PARENT of the
+commit that ships it** — the build has to run before its own commit can exist.
+Compare against:
+
+```bash
+git log -1 --format=%h backend/pb_public   # the commit that shipped the build
+git rev-parse --short HEAD~1               # what the stamp will say, if pb_public
+                                           # was the most recent commit
+```
+
+Simplest check that is always right: `grep ts-build backend/pb_public/index.html`
+on the box after pulling, and confirm the phone shows the same string. Matching
+each other is the question; matching HEAD is not.
 
 **If a phone is genuinely wedged:** long-press the home-screen icon → remove,
 open the URL in the browser (a fresh navigation with no worker controlling it),

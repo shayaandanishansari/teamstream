@@ -6,8 +6,13 @@ import react from "@vitejs/plugin-react";
  *
  * "Did it actually update?" has to be answerable by LOOKING. The three phones
  * have no devtools, the cutover replaces a service-worker-cached app, and
- * "try clearing your cache" is not a diagnosis. One line in the footer that
- * matches HEAD settles it in two seconds.
+ * "try clearing your cache" is not a diagnosis. One line in the corner settles
+ * it in two seconds.
+ *
+ * NOTE the stamp is the commit the build was made FROM, which is necessarily
+ * the PARENT of the commit that ships the build - the build has to run before
+ * its own commit exists. So compare the phone against what is in
+ * backend/pb_public/index.html on the box, not against HEAD.
  */
 function buildStamp(): Plugin {
   let stamp = "dev";
