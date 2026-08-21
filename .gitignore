@@ -18,6 +18,12 @@ backend/pocketbase.exe
 # types. The schema lives in pb_migrations/ and is fully reproducible, so the
 # data must NEVER be committed (it also contains superuser credentials).
 backend/pb_data/
+# A second, throwaway dev database built fresh from pb_migrations/.
+# The tracked pb_data/ on this machine has drifted from the migrations
+# (members ended up a base collection), so local work runs against this one.
+backend/pb_data_dev/
+backend/pb_data.*/
+
 
 # NOTE: backend/pb_public/ (the built Flutter web app) IS tracked on purpose —
 # the always-on Linux box has no Flutter to build it, so it receives the

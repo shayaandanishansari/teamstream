@@ -1,0 +1,72 @@
+/* The login screen. Colour means a person here too: the only hue is each
+   member's own dot, and it sits inside the ring base.css gives it. */
+
+.login {
+  max-inline-size: 26rem;
+  margin: 0 auto;
+  padding: 12vh 1.5rem 4rem;
+}
+
+.login header { margin-block-end: 2rem; }
+.login h1 { font-size: 1.6rem; letter-spacing: -0.01em; margin-block-start: 0.35rem; }
+
+.login-hint { color: var(--ink-3); }
+.login-error { color: var(--danger); margin-block: 0.75rem 0; }
+
+.who { list-style: none; display: grid; gap: 0.5rem; }
+
+.who-btn {
+  inline-size: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.9rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font: inherit;
+  font-weight: 500;
+  color: var(--ink);
+  text-align: start;
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+.who-btn:hover { border-color: var(--line-strong); transform: translateY(-1px); }
+.who-btn:active { transform: translateY(0); }
+
+.pw { display: grid; gap: 0.4rem; }
+
+.pw input {
+  font: inherit;
+  padding: 0.75rem 0.9rem;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+.pw input:focus-visible { outline: none; border-color: var(--ink); }
+
+.pw-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-block-start: 1rem;
+}
+
+.pw-actions button {
+  font: inherit;
+  font-weight: 500;
+  padding: 0.6rem 1.1rem;
+  border-radius: 10px;
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--ground);
+  cursor: pointer;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+.pw-actions button:disabled { opacity: 0.45; cursor: default; }
+.pw-actions .ghost { background: transparent; color: var(--ink); border-color: var(--line-strong); }

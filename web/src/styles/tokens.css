@@ -1,0 +1,200 @@
+/* TeamStream design tokens — the whole visual system, in one file.
+ *
+ * THE ONE RULE: colour means a person. Nothing else.
+ *
+ * This is not a stylistic preference, it is forced by the data. The three
+ * member colours seeded in `1721700200_seed_members.js` — teal #00A896
+ * (Shayaan), amber #FFB238 (Umair), cobalt #3A5AFF (Tawab) — are exactly the
+ * three accents the old Flutter theme used for UI. A teal button therefore
+ * reads as "Shayaan" to anyone looking at the board. So the UI gives up chroma
+ * entirely: structure and interaction are ink, and the only coloured things on
+ * screen are people.
+ *
+ * Contrast is stated next to every value. Ratios are WCAG 2.1, computed rather
+ * than guessed; re-check with scripts/verify-palette.mjs if you change one.
+ * Targets: body text AAA (7:1), secondary and label text AA (4.5:1). Labels are
+ * held to 4.5 too — an eyebrow nobody can read is not a subtle design, it is a
+ * missing label.
+ */
+
+:root {
+  /* ---- ground plane ------------------------------------------------------
+   * Warm off-white, not the old cool mint. Two reasons: a neutral ground stops
+   * the page tinting the member colours sitting on it, and warm greys let a
+   * hairline read as a hairline instead of a smudge. */
+  --ground: #FBFAF8;   /* the page */
+  --surface: #FFFFFF;  /* cards, sheets — lifts off the ground */
+  --sunken: #F1EEE9;   /* inputs, wells, empty states */
+
+  /* ---- ink ---------------------------------------------------------------
+   * Three weights, no more. Every one is a text colour and every one clears
+   * its target on all three grounds above. */
+  --ink:   #1B1A17;  /* body.      on ground 16.68:1 · surface 17.40:1 · sunken 15.04:1  AAA */
+  --ink-2: #56534C;  /* secondary. on ground  7.35:1 · surface  7.67:1 · sunken  6.63:1  AA+ */
+  --ink-3: #6E6A62;  /* labels.    on ground  5.16:1 · surface  5.38:1 · sunken  4.65:1  AA  */
+
+  /* Hairlines are decorative — they separate, they never carry meaning, so the
+   * 3:1 UI threshold does not apply. Anything a line is the ONLY signal for is
+   * a bug; give it a label. */
+  --line: #E5E1D9;         /* 1.25:1 on ground — deliberately faint */
+  --line-strong: #CFCBC2;  /* dividers that end a section rather than a row */
+
+  /* ---- danger ------------------------------------------------------------
+   * The single exception to "colour means a person", because a destructive
+   * action must not be discoverable only by reading. Kept far from all three
+   * member hues so it cannot be mistaken for one. */
+  --danger: #B3261E;  /* as TEXT on ground 6.27:1 AA — safe to use as a label */
+
+  /* ---- member colour, and how it is allowed to appear --------------------
+   * Member colour arrives from the database and is editable in the admin UI,
+   * so no value can be assumed. The measurements that force the rule:
+   *
+   *     ink on teal    5.71:1 ok      white on teal    2.98:1 NO
+   *     ink on amber   9.46:1 ok      white on amber   1.80:1 NO
+   *     ink on cobalt  3.31:1 NO      white on cobalt  5.14:1 ok
+   *
+   * The three colours DISAGREE about what text they need — two want dark, one
+   * wants light — and the answer changes the moment somebody edits their
+   * colour. So: text is NEVER placed on a member colour, and a member colour is
+   * NEVER used as a text colour. It appears only as a fill inside a hairline
+   * ring, at non-text sizes.
+   *
+   * The ring is what makes that safe for any value: as bare fills on a light
+   * surface teal is 2.98:1 and amber 1.80:1, both under the 3:1 a UI element
+   * needs, so a plain dot in two of the three colours is genuinely hard to see.
+   * The ring supplies the edge, so legibility stops depending on the colour. */
+  --member-ring: rgba(27, 26, 23, 0.28);  /* ink at 28% — reads on any fill */
+  --member-dot: 10px;
+  --member-bar: 3px;  /* the left edge of a row: who is this */
+
+  /* ---- type --------------------------------------------------------------
+   * Two families, down from the old three. The serif display face is gone —
+   * this is a working board, not a title page.
+   *
+   * Mono is not decoration: a timer that ticks with proportional figures
+   * reflows every second, and the digits visibly jitter. Anything that counts
+   * gets --font-mono and tabular figures. */
+  --font-text: "Instrument Sans", ui-sans-serif, system-ui, -apple-system,
+               "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo,
+               Consolas, monospace;
+
+  --text-xs: 0.75rem;    /* 12px — labels, eyebrows */
+  --text-sm: 0.8125rem;  /* 13px — secondary rows */
+  --text-md: 0.9375rem;  /* 15px — body, task titles */
+  --text-lg: 1.125rem;   /* 18px — section heads */
+  --text-xl: 1.5rem;     /* 24px — screen titles */
+  --text-2xl: 2rem;      /* 32px — the dashboard's big numbers */
+
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-bold: 650;  /* Instrument Sans is variable; 650 beats a flat 700 */
+
+  --leading-tight: 1.2;
+  --leading-normal: 1.5;
+
+  /* Labels are uppercase and tracked out. Tracking is required, not taste:
+   * uppercase at 12px without it is a wall. */
+  --tracking-label: 0.08em;
+
+  /* ---- space -------------------------------------------------------------
+   * A 4px base. Named by use, so a row's padding cannot drift from a card's. */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  /* Shadows are for things that genuinely float — menus, sheets, a dragged
+   * card. A resting card is separated by its surface and a hairline. */
+  --shadow-pop: 0 1px 2px rgba(27, 26, 23, 0.06), 0 8px 24px rgba(27, 26, 23, 0.10);
+
+  /* ---- interaction -------------------------------------------------------
+   * Focus is ink, not a hue, so it never competes with an identity colour.
+   * Two-tone so the ring survives on both --surface and a member fill. */
+  --focus-ring: 0 0 0 2px var(--surface), 0 0 0 4px var(--ink);
+
+  /* The live-timer pulse. "Someone is working right now" is the board's most
+   * important state, and it is expressed as motion plus that person's own
+   * colour — never a system colour, because the state belongs to a person. */
+  --pulse-duration: 2s;
+
+  /* ---- motion ------------------------------------------------------------
+   * Everything that moves picks a duration and an easing from here. The point
+   * of naming them is that "transitions everywhere" stays one system instead of
+   * forty hand-typed numbers that almost agree.
+   *
+   * Durations are graded by how far a thing travels, which is the only rule
+   * that keeps a big panel and a small chip feeling like the same product:
+   * a colour change is nearly instant, a row settles, a whole section unfolds.
+   * Past ~400ms an interface stops feeling responsive and starts feeling slow,
+   * so nothing here is slower than that. */
+  --dur-instant: 90ms;   /* hover, focus, colour — must not feel laggy */
+  --dur-fast: 150ms;     /* chips, menus, small state flips */
+  --dur-base: 220ms;     /* rows entering and leaving, dialogs */
+  --dur-slow: 320ms;     /* a whole work section folding, a page swap */
+
+  /* Decelerate on entry: fast off the mark, gentle at rest. This is the one
+   * that makes UI feel "placed" rather than "moved". */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  /* Accelerate on exit: things leaving should not linger asking for attention. */
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  /* Symmetric, for anything that reverses — a caret, a fold. */
+  --ease-io: cubic-bezier(0.65, 0, 0.35, 1);
+  /* A little overshoot, reserved for the one or two things that should feel
+   * physical. Used sparingly: on everything it reads as a toy. */
+  --ease-back: cubic-bezier(0.34, 1.4, 0.64, 1);
+
+  /* How far a thing moves as it arrives. Small — the motion is a hint about
+   * where it came from, not a journey. */
+  --lift: 6px;
+}
+
+/* Dark theme. Same token names, same guarantees, re-measured — a palette that
+ * only holds up in one theme is half a palette.
+ * Defined for the system default AND for an explicit [data-theme] so a manual
+ * toggle can win in both directions. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #121312;
+    --surface: #1C1D1C;
+    --sunken: #0B0C0B;
+
+    --ink:   #EDEAE4;  /* on ground 15.51:1 · surface 14.08:1 · sunken 16.32:1  AAA */
+    --ink-2: #A8A49B;  /* on ground  7.49:1 · surface  6.80:1 · sunken  7.88:1  AA+ */
+    --ink-3: #8A867E;  /* on ground  5.14:1 · surface  4.66:1 · sunken  5.40:1  AA  */
+
+    --line: #2E2F2E;
+    --line-strong: #414341;
+
+    --danger: #FF9A8F;  /* as TEXT on ground 9.11:1 AA — lightened; #B3261E is
+                         * invisible on a dark ground, so the token changes
+                         * value rather than the rule changing. */
+
+    /* Ink-tinted rings vanish on a dark ground, so the ring inverts. The RULE
+     * is unchanged — a member fill still never carries text. */
+    --member-ring: rgba(237, 234, 228, 0.32);
+
+    --shadow-pop: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.5);
+  }
+}
+
+:root[data-theme="dark"] {
+  --ground: #121312;
+  --surface: #1C1D1C;
+  --sunken: #0B0C0B;
+  --ink:   #EDEAE4;
+  --ink-2: #A8A49B;
+  --ink-3: #8A867E;
+  --line: #2E2F2E;
+  --line-strong: #414341;
+  --danger: #FF9A8F;
+  --member-ring: rgba(237, 234, 228, 0.32);
+  --shadow-pop: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.5);
+}

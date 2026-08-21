@@ -1,0 +1,196 @@
+/* The shared motion patterns. Durations and easings come from tokens.css; this
+ * file is the small set of *mechanisms* the whole app reuses.
+ *
+ * Three techniques, and each was picked for surviving being switched off:
+ *   1. .fold      — open/close to auto height, via grid-template-rows
+ *   2. .pop       — enter AND exit, via @starting-style + allow-discrete
+ *   3. ::view-transition — page swaps, via the native API
+ */
+
+/* ---- 1. folding to auto height -------------------------------------------
+ * `height: auto` has never been animatable, and the usual answers are all bad:
+ * a hardcoded max-height guesses wrong and clips or lags, and measuring with JS
+ * costs a layout read on every toggle.
+ *
+ * The grid trick avoids both. A single-row grid animating 0fr -> 1fr resolves
+ * to the child's real height at every frame, so it works for any content, needs
+ * no measurement, and cannot clip.
+ *
+ * `interpolate-size: allow-keywords` would be tidier, but it is Chromium-only
+ * today — this works in every browser the team might open. */
+.fold {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--dur-slow) var(--ease-io);
+}
+
+.fold.is-open {
+  grid-template-rows: 1fr;
+}
+
+/* Both are required: the row must be allowed to be shorter than its content
+ * (min-block-size) and must hide the overflow while it is. */
+.fold > * {
+  overflow: hidden;
+  min-block-size: 0;
+}
+
+/* Content fades slightly behind the fold so a long list does not appear to be
+ * squashed flat — it recedes rather than compressing. */
+.fold > * > * {
+  transition: opacity var(--dur-fast) var(--ease-io);
+}
+.fold:not(.is-open) > * > * {
+  opacity: 0;
+}
+
+/* ---- 2. enter and exit, in CSS -------------------------------------------
+ * React unmounts immediately, so an exit animation normally needs a library
+ * holding the element alive. `transition-behavior: allow-discrete` removes that
+ * need: `display` becomes transitionable, so the element stays visible for the
+ * duration of its own exit and then goes. `@starting-style` supplies the
+ * "before it was shown" values that entry animates FROM.
+ *
+ * This is what lets menus and dialogs animate both ways with no dependency —
+ * as long as the element is toggled by `display`/`popover` rather than being
+ * conditionally rendered by React. Where React really does mount and unmount, a
+ * `.is-leaving` class plus a delayed unmount does the same job (see .row-anim).
+ */
+.pop {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transition:
+    opacity var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out),
+    overlay var(--dur-fast) allow-discrete,
+    display var(--dur-fast) allow-discrete;
+}
+
+/* The state it animates out to — and, via @starting-style, in from. */
+.pop:not(:popover-open):not(.is-open) {
+  opacity: 0;
+  transform: translateY(calc(var(--lift) * -1)) scale(0.97);
+  transition-timing-function: var(--ease-in);
+}
+
+@starting-style {
+  .pop:popover-open,
+  .pop.is-open {
+    opacity: 0;
+    transform: translateY(calc(var(--lift) * -1)) scale(0.97);
+  }
+}
+
+/* Native popovers get a backdrop we can fade too. */
+.pop::backdrop {
+  background: transparent;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    overlay var(--dur-fast) allow-discrete,
+    display var(--dur-fast) allow-discrete;
+}
+.pop:popover-open::backdrop {
+  background: rgb(0 0 0 / 0.06);
+}
+@starting-style {
+  .pop:popover-open::backdrop { background: transparent; }
+}
+
+/* ---- rows that really do mount and unmount -------------------------------
+ * A task being added or deleted is a genuine React mount/unmount, so entry uses
+ * @starting-style and exit is driven by a `.is-leaving` class the component
+ * sets before it unmounts on a timer. */
+.row-anim {
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity var(--dur-base) var(--ease-out),
+    transform var(--dur-base) var(--ease-out);
+}
+
+@starting-style {
+  .row-anim {
+    opacity: 0;
+    transform: translateY(var(--lift));
+  }
+}
+
+.row-anim.is-leaving {
+  opacity: 0;
+  /* Leaves the way a deleted thing should: collapsing, not drifting upward as
+   * though it were merely scrolling away. */
+  transform: translateX(calc(var(--lift) * 2));
+  transition-duration: var(--dur-fast);
+  transition-timing-function: var(--ease-in);
+  pointer-events: none;
+}
+
+/* ---- 3. page swaps -------------------------------------------------------
+ * The API's default is already a crossfade; this adds a small directional lift
+ * so a swap reads as "a new screen arrived" rather than "the picture changed".
+ *
+ * LITERAL VALUES, DELIBERATELY. These rules used var(--dur-base) etc. and that
+ * was a bug: `animation` is a shorthand, and a shorthand containing a var()
+ * that fails to substitute is invalid at computed-value time — so it does not
+ * fall back to the previous value, it computes to `animation: none`. That kills
+ * the browser's OWN default crossfade too, making the page swap instant. An
+ * enhancement that fails worse than its own absence is not worth the tidiness,
+ * and the view-transition pseudo-elements live in a separate tree where custom
+ * property inheritance is not worth betting on.
+ *
+ * The numbers below are --dur-base and --dur-slow. If those are retuned, retune
+ * these; the comment is the link, because the language will not carry one here.
+ */
+::view-transition-old(root) {
+  animation: vt-out 220ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+::view-transition-new(root) {
+  animation: vt-in 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes vt-out {
+  to { opacity: 0; transform: translateY(-6px); }
+}
+
+@keyframes vt-in {
+  from { opacity: 0; transform: translateY(6px); }
+}
+
+/* ---- the fallback, for browsers with no View Transitions -----------------
+ * Firefox has no same-document view transitions, so on those the swap would be
+ * instant no matter how correct the rules above are. `viewTransition.ts` stamps
+ * `no-vt` on <html> when the API is missing, and the page container remounts on
+ * a keyed change, so this animates the arriving screen.
+ *
+ * Scoped to .no-vt so it never doubles up with a real view transition. It is an
+ * enter-only animation — without the API there is no old snapshot to animate
+ * out, and faking one would mean holding the previous screen in the DOM, which
+ * is precisely the complexity the API exists to remove. */
+.no-vt .page-swap {
+  animation: vt-in 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ---- switching it all off ------------------------------------------------
+ * base.css already flattens durations under prefers-reduced-motion. View
+ * transitions are animated by the UA rather than by our transitions, so they
+ * need turning off explicitly — the JS side declines to start one at all, and
+ * this is the belt to that braces. */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root),
+  .no-vt .page-swap {
+    animation: none !important;
+  }
+
+  /* A fold with no transition should simply be open or closed. Left animating
+   * at 0.001ms it would still resolve through grid, which some engines paint as
+   * a flicker. */
+  .fold {
+    transition: none;
+  }
+  .fold > * > * {
+    transition: none;
+    opacity: 1;
+  }
+}
