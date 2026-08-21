@@ -21,8 +21,11 @@ import { pb } from "./pb";
  * localStorage (the PocketBase SDK's auth store writes to it).
  */
 
-const ORIGIN = process.env.TS_ORIGIN ?? "http://localhost:5173";
-const PW = process.env.TS_DEV_PASSWORD ?? "teamstream-dev-local";
+/* Vitest exposes the environment on import.meta.env; `process` is not in this
+ * project's type lib, because everything else here is browser code. */
+const env = import.meta.env as Record<string, string | undefined>;
+const ORIGIN = env.TS_ORIGIN ?? "http://localhost:5173";
+const PW = env.TS_DEV_PASSWORD ?? "teamstream-dev-local";
 
 /* Set at MODULE level, not in beforeAll.
  *
@@ -59,23 +62,21 @@ try {
 } catch {
   live = false;
 }
-console.log(
-  live
-    ? "[filesApi] services are up - running the integration cases"
-    : `[filesApi] ${ORIGIN} is not answering - integration cases skipped`,
-);
-
-/** getRandomValues refuses more than 65,536 bytes per call. */
-function randomBytes(n: number): Uint8Array {
-  const out = new Uint8Array(n);
+/** getRandomValues refuses more than 65,536 bytes per call.
+ *
+ *  Typed over ArrayBuffer explicitly: `Uint8Array` is generic over
+ *  ArrayBufferLike in the current lib, and a SharedArrayBuffer-backed view is
+ *  not a valid BlobPart. Pinning it here keeps every call site clean. */
+function randomBytes(n: number): Uint8Array<ArrayBuffer> {
+  const out = new Uint8Array(new ArrayBuffer(n));
   for (let i = 0; i < n; i += 65536) {
     crypto.getRandomValues(out.subarray(i, Math.min(i + 65536, n)));
   }
   return out;
 }
 
-const sha256 = async (bytes: Uint8Array): Promise<string> =>
-  [...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes as BufferSource))]
+const sha256 = async (bytes: Uint8Array<ArrayBuffer>): Promise<string> =>
+  [...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))]
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
 
@@ -154,9 +155,17 @@ describe("the client upload loop", () => {
   }, 60_000);
 });
 
-it("is skipped cleanly when the services are down", () => {
-  // A test file whose every case is `runIf` would report zero tests and look
-  // like it was never wired up. This one always runs and says which mode we
-  // are in.
-  expect(typeof live).toBe("boolean");
-});
+/* The mode goes in the test NAME, not a console.log.
+ *
+ * A file whose every case is `runIf` reports "skipped" with no explanation, and
+ * anything logged at module scope is swallowed — that code runs during
+ * collection, before the reporter attaches. The name is the one channel that
+ * always reaches the person reading the output. */
+it(
+  live
+    ? `integration cases ran against ${ORIGIN}`
+    : `integration cases SKIPPED - ${ORIGIN} is not answering (start the services to run them)`,
+  () => {
+    expect(typeof live).toBe("boolean");
+  },
+);
