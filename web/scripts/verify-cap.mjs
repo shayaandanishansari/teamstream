@@ -109,4 +109,10 @@ try {
 }
 
 console.log(failures === 0 ? "\nAll cap checks passed.\n" : `\n${failures} FAILED\n`);
-process.exit(failures === 0 ? 0 : 1);
+/* Close the realtime connection before exiting. Without this, Node on Windows
+ * tears down an open EventSource handle during process.exit and libuv prints an
+ * assertion failure AFTER the success line - a passing script that looks like it
+ * crashed, which erodes trust in the suite faster than a failing one. */
+await pb.realtime.unsubscribe().catch(() => {});
+await su.realtime.unsubscribe().catch(() => {});
+process.exitCode = failures === 0 ? 0 : 1;

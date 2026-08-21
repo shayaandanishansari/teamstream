@@ -1,0 +1,29 @@
+# Pinned to what was verified on the dev machine (Python 3.14.3).
+# Floor is Python 3.11; check `python3 --version` on the box before installing.
+
+fastapi==0.135.3
+# Named explicitly rather than left to FastAPI's range: Range/206 support lives
+# here, it is load-bearing for video seeking, and tests/test_range.py asserts
+# this version's exact behaviour. An unpinned upgrade that regressed it would
+# break the team's video player rather than the test suite.
+starlette==1.0.0
+uvicorn[standard]==0.44.0
+pydantic==2.12.5
+httpx==0.28.1
+anyio==4.13.0
+
+# Thumbnails. Pillow is the only hard requirement; the rest degrade.
+Pillow==12.2.0
+pypdfium2==5.8.0
+# Unpinned AND soft-imported. Three people on phones means most photos are
+# .heic, which Pillow cannot decode alone — but a wheel that fails to build on
+# an odd architecture must not take the whole service down with it.
+pillow-heif
+
+# Deliberately NOT here:
+#   python-multipart — chunk bodies are raw application/octet-stream, never
+#                      multipart. Nothing in this service parses a form.
+#   itsdangerous    — no signed cookies. Sessions are opaque tokens against a
+#                      server-side map, which is revocable; a signed cookie is
+#                      not, and would need a secret to manage.
+#   gunicorn        — systemd is the supervisor.

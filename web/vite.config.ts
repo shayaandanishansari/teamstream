@@ -1,5 +1,36 @@
-import { defineConfig } from "vite";
+import { execSync } from "node:child_process";
+import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
+
+/* Stamp the build into the HTML and into the app.
+ *
+ * "Did it actually update?" has to be answerable by LOOKING. The three phones
+ * have no devtools, the cutover replaces a service-worker-cached app, and
+ * "try clearing your cache" is not a diagnosis. One line in the footer that
+ * matches HEAD settles it in two seconds.
+ */
+function buildStamp(): Plugin {
+  let stamp = "dev";
+  return {
+    name: "ts-build-stamp",
+    configResolved(config) {
+      if (config.command !== "build") return;
+      let sha = "unknown";
+      try {
+        sha = execSync("git rev-parse --short HEAD", { encoding: "utf8" }).trim();
+      } catch {
+        /* a build from a tarball with no git is fine, just less informative */
+      }
+      stamp = `${sha} ${new Date().toISOString().slice(0, 16).replace("T", " ")}`;
+    },
+    config() {
+      return { define: { __TS_BUILD__: JSON.stringify(stamp) } };
+    },
+    transformIndexHtml(html) {
+      return html.replace("__BUILD__", stamp);
+    },
+  };
+}
 
 /* Dev is same-origin, exactly as production is.
  *
@@ -21,7 +52,7 @@ import react from "@vitejs/plugin-react";
  * failure that would only ever show up in production.
  */
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), buildStamp()],
   server: {
     port: 5173,
     /* Fail rather than drift. Vite's default is to walk to the next free port,

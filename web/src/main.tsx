@@ -17,6 +17,12 @@ import "./styles/base.css";
 import "./styles/motion.css";
 
 import App from "./App.tsx";
+import { purgeLegacy } from "./boot/purgeLegacy";
+
+/* Awaited before the first render, so a phone carrying the old Flutter shell's
+ * service worker or caches is cleaned before anything here tries to fetch
+ * through it. Costs one localStorage read after the first run. */
+await purgeLegacy();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

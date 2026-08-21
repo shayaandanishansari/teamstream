@@ -1,0 +1,51 @@
+# TeamStream file service - FastAPI under uvicorn, always-on via systemd.
+# Install to /etc/systemd/system/teamstream-files.service (see deploy/DEPLOY.md).
+#
+# Binds to 127.0.0.1 ONLY, exactly like PocketBase. The Cloudflare tunnel on this
+# same box is the sole ingress, and it routes /files/* here by path.
+[Unit]
+Description=TeamStream file service (FastAPI)
+After=network.target pocketbase.service
+# Wants, not Requires: if PocketBase is down this should still start and answer
+# /files/health, so you can tell the difference between "the box is wedged" and
+# "one service is wedged".
+Wants=pocketbase.service
+
+[Service]
+Type=simple
+User=teamstream
+Group=teamstream
+WorkingDirectory=/opt/teamstream/files
+Environment=TS_FILES_ROOT=/srv/teamstream-files
+Environment=TS_PB_URL=http://127.0.0.1:8090
+Environment=TS_COOKIE_SECURE=1
+Environment=PYTHONUNBUFFERED=1
+
+# --workers 1 is a preference, not an invariant. The in-process caches (token
+# TTL, per-thumbnail locks, per-upload locks) would merely get less effective
+# with more workers, but two concurrent chunk PUTs to one upload in different
+# processes would both pass the offset check and both append. There is an
+# flock on the part file so that cannot actually happen -- this just means we
+# never rely on it.
+#
+# No request-size or timeout limit: uvicorn streams bodies with no cap by
+# default, which is exactly what a chunked upload of a multi-GB file wants.
+ExecStart=/opt/venvs/teamstream-files/bin/uvicorn app.main:app \
+  --host 127.0.0.1 --port 8091 --workers 1 \
+  --proxy-headers --forwarded-allow-ips=127.0.0.1
+
+Restart=always
+RestartSec=5
+LimitNOFILE=8192
+
+# This service touches exactly two trees: the venv (read) and the store
+# (write). ProtectSystem=strict makes /opt read-only at runtime, which is
+# correct -- pip install happens outside the unit, during a deploy.
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/srv/teamstream-files
+
+[Install]
+WantedBy=multi-user.target

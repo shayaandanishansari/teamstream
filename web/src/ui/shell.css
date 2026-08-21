@@ -92,3 +92,13 @@
 .stub { max-inline-size: 40rem; margin: 0 auto; padding: 4rem 1.5rem; }
 .stub h1 { font-size: 1.6rem; margin-block-start: 0.35rem; }
 .stub-note { color: var(--ink-3); margin-block-start: 1rem; }
+
+/* Deliberately small and dim: it is a diagnostic, not information anyone needs
+   while working. It only has to be readable when somebody goes looking. */
+.build-stamp {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: var(--ink-3);
+  letter-spacing: 0.02em;
+}
+@media (max-width: 640px) { .build-stamp { display: none; } }

@@ -33,3 +33,9 @@ backend/pb_data.*/
 # PocketBase's own distribution docs (shipped alongside the binary).
 backend/CHANGELOG.md
 backend/LICENSE.md
+
+# The file service's local store and venv. The real store on the box lives at
+# /srv/teamstream-files and is backed up separately -- see files/README.md.
+.filestore/
+files/.venv/
+files/**/__pycache__/

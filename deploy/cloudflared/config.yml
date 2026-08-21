@@ -6,6 +6,23 @@ tunnel: teamstream
 credentials-file: /root/.cloudflared/<TUNNEL_ID>.json
 
 ingress:
+  # Bytes -> the FastAPI file service. MOST SPECIFIC FIRST: cloudflared matches
+  # top-down, so this must sit above the catch-all below or PocketBase would
+  # swallow every path including this one.
+  #
+  # `path` is a Go regexp against the URL path. The `(/|$)` matters: `^/files/`
+  # alone does not match a bare `/files`.
+  #
+  # NOTE: this rule owns the /files/* URL namespace outright, which is why the
+  # web app's own file page is at /drive. An API prefix and a client-side route
+  # cannot share a namespace -- a browser navigating to /files would be handed
+  # an API 404 instead of the app.
+  #
+  # No clash with PocketBase's own /api/files/... -- different prefix.
+  - hostname: teamstream.shayaandanishansari.com
+    path: ^/files(/|$)
+    service: http://127.0.0.1:8091
+
   # Public name -> local PocketBase (app + API, same origin).
   - hostname: teamstream.shayaandanishansari.com
     service: http://127.0.0.1:8090

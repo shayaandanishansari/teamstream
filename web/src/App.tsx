@@ -61,6 +61,9 @@ export default function App() {
           <button className="ghost" onClick={() => void signOut()}>
             Sign out
           </button>
+          {/* The build, in the corner. On a phone with no devtools this is the
+              only way to answer "did it actually update?" after a deploy. */}
+          <span className="build-stamp" title="build">{__TS_BUILD__}</span>
         </div>
       </nav>
 

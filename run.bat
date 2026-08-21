@@ -1,16 +1,32 @@
 @echo off
-REM ── TeamStream: start backend + web app in two windows ──
-echo Starting TeamStream (PocketBase + Flutter web)...
+REM -- TeamStream dev: PocketBase, the file service, and Vite, in three windows.
+echo Starting TeamStream (PocketBase + files + web)...
 
-start "TeamStream - PocketBase" cmd /k "cd /d C:\Drives\F\Work\TeamStream\backend && pocketbase.exe serve --http=127.0.0.1:8090"
+REM --dir points at pb_data_dev, a throwaway database built fresh from
+REM pb_migrations. The tracked pb_data on this machine drifted from the
+REM migrations at some point (members ended up a base collection, so
+REM auth-with-password 404s), and rather than repair live data we build a
+REM correct one. Recreate it with:
+REM   cd backend
+REM   set TEAMSTREAM_PASSWORD=teamstream-dev-local
+REM   pocketbase.exe migrate up --dir=%CD%\pb_data_dev --migrationsDir=%CD%\pb_migrations
+start "TeamStream - PocketBase" cmd /k "cd /d C:\Drives\F\Work\TeamStream\backend && pocketbase.exe serve --http=127.0.0.1:8090 --dir=C:\Drives\F\Work\TeamStream\backend\pb_data_dev --hooksDir=C:\Drives\F\Work\TeamStream\backend\pb_hooks"
 
-REM PB_URL is required here: the dev server and PocketBase are on different
-REM ports, so the same-origin default in app/lib/config.dart would aim the API
-REM at the dev server (:5000) and every call would come back as index.html.
-start "TeamStream - App" cmd /k "cd /d C:\Drives\F\Work\TeamStream\app && flutter run -d web-server --web-port=5000 --web-hostname=127.0.0.1 --dart-define=PB_URL=http://127.0.0.1:8090"
+REM Note there is no space before each && -- a trailing space becomes part of
+REM the environment variable's value.
+start "TeamStream - Files" cmd /k "cd /d C:\Drives\F\Work\TeamStream\files && set TS_FILES_ROOT=C:\Drives\F\Work\TeamStream\.filestore&& set TS_PB_URL=http://127.0.0.1:8090&& set TS_COOKIE_SECURE=0&& python -m uvicorn app.main:app --host 127.0.0.1 --port 8091 --reload"
+
+REM No PB_URL to define any more. Vite proxies /api to :8090 and /files to
+REM :8091, so dev is same-origin exactly as production is -- which is also the
+REM only way the ts_files cookie behaves the same in both.
+start "TeamStream - Web" cmd /k "cd /d C:\Drives\F\Work\TeamStream\web && npm run dev"
 
 echo.
-echo Two windows opened. Wait for the App window to say "is being served at",
-echo then open:  http://127.0.0.1:5000
+echo Three windows opened. Wait for the Web window to say "ready", then open:
+echo    http://localhost:5173
+echo.
+echo Sign in as any of the three names with the LOCAL dev password:
+echo    teamstream-dev-local
+echo (The real shared password is not in the dev database, on purpose.)
 echo.
 pause
