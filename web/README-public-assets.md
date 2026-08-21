@@ -1,4 +1,8 @@
-# Why this manifest looks like it does
+# Why `public/` looks like it does
+
+(This file lives OUTSIDE `public/` on purpose: everything in there is copied
+verbatim into the site root and served, and a design note is not a static
+asset.)
 
 Three things here are deliberate and easy to "clean up" wrongly.
 
@@ -16,5 +20,5 @@ that exact path.
 phone serving a cached shell, or an installed PWA that has not refreshed, gets a
 picture rather than a broken tile.
 
-See also `flutter_service_worker.js` in this directory, which is kept for a
+See also `public/flutter_service_worker.js`, which is kept for a
 related reason.

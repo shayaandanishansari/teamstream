@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <!-- Both, so the browser paints its chrome to match whichever theme wins. -->
+    <meta name="color-scheme" content="light dark" />
+
+    <!-- The PWA half. `id` is pinned inside the manifest so the three phones'
+         existing home-screen icons update in place rather than installing a
+         second app - see public/README-manifest.md. -->
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/icons/Icon-192.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="TeamStream" />
+    <!-- Two, one per scheme, because iOS does not read the CSS tokens. -->
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#FBFAF8" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#121312" />
+
+    <!-- Stamped at build time. "Did it actually update?" should be answerable
+         by looking rather than by deduction, and on a phone with no devtools
+         this is the only way to tell. -->
+    <meta name="ts-build" content="3ae121c 2026-08-21 08:33" />
+
+    <title>TeamStream</title>
+    <script type="module" crossorigin src="/assets/index-Dv0aE954.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-VJc3HgeE.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
