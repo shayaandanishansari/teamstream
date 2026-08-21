@@ -30,7 +30,7 @@ onRecordCreateRequest((e) => {
   } catch (err) {
     console.log("[history] create log failed:", err);
   }
-}, "works", "tasks", "time_entries", "events", "attachments");
+}, "works", "tasks", "time_entries", "events", "attachments", "files");
 
 onRecordUpdateRequest((e) => {
   let before = null;
@@ -55,7 +55,7 @@ onRecordUpdateRequest((e) => {
   } catch (err) {
     console.log("[history] update log failed:", err);
   }
-}, "works", "tasks", "time_entries", "events", "attachments");
+}, "works", "tasks", "time_entries", "events", "attachments", "files");
 
 onRecordDeleteRequest((e) => {
   const cn = e.record.collection().name;
@@ -82,4 +82,4 @@ onRecordDeleteRequest((e) => {
   } catch (err) {
     console.log("[history] delete log failed:", err);
   }
-}, "works", "tasks", "time_entries", "events", "attachments");
+}, "works", "tasks", "time_entries", "events", "attachments", "files");
