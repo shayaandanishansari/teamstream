@@ -496,8 +496,11 @@ Changes to `deploy/`:
 
 ## 11. Open questions
 
-1. **Free disk on the VPS?** — STILL OPEN. The only thing blocking Phase 4's
-   storage sizing. Needs `df -h /srv` on the box.
+1. **Free disk on the VPS?** — STILL OPEN, and now also **`df -i /srv`**.
+   Inodes matter as much as bytes here: every upload creates a directory plus
+   two or three files, so the store can run out of inodes with plenty of space
+   left. Both numbers are reported by `GET /files/health` once the service is
+   running. It gates storage sizing, not the design — everything else is built.
 2. ~~Is the complaint about the board its *look* or its *feel*?~~ — **LOOK.**
    Design the board first, then port. See Phase 0 above.
 3. ~~Does anything still need native Android/iOS?~~ — **PWA is final.**
@@ -515,17 +518,89 @@ Changes to `deploy/`:
 ## 12. Order of work
 
 ```
-Phase 0  decisions                      ── DONE bar 2 (disk, board look/feel)
-Phase 1  React skeleton + store/api     ── scaffolded; store/api still to lift
-Phase 2  models + realtime proof        ── time_math ported+tested; rest to do
-                                           STOP HERE if realtime misbehaves
-Phase 3  board                          ── the real test; validate before continuing
-         dashboard, identity, calendar
-Phase 4  FastAPI: chunked up, range down, thumbs, cookie auth
-Phase 5  file explorer UI               ── lifted from video_editor
-Phase 6  deploy: 2nd unit, ingress, backups
+Phase 0  decisions                      -- DONE bar the disk numbers
+Phase 1  React skeleton + store/api     -- DONE
+Phase 2  models + realtime proof        -- DONE. Gate passed: two clients, one
+                                           board, SSE create/update/delete.
+                                           `npm run verify:realtime`
+Phase 3  board, dashboard, identity     -- DONE on real data. calendar: a stub,
+                                           as it is in Flutter.
+Phase 4  FastAPI file service           -- DONE. `python tests/verify_service.py`
+Phase 5  drive UI at /drive             -- DONE
+Phase 6  migration, sweep hook, unit,   -- WRITTEN AND TESTED LOCALLY.
+         ingress, cutover pieces           THE VPS IS UNTOUCHED. DEPLOY.md
+                                           steps 8 and 9 are yours to run.
 ```
 
 Flutter keeps serving from `pb_public/` until Phase 3 looks better than it does.
 Build files last: they are native to the new stack, and building them in Flutter
 first would be paying twice for the hardest thing to port.
+
+---
+
+## 13. What this plan got wrong
+
+Written after the build, because a plan that is quietly corrected teaches
+nobody. Each of these was found by doing the thing, not by thinking harder
+about it.
+
+**§8 said to lift the upload UI from `video_editor`. There is nothing to lift.**
+That codebase has no upload code at all — no multipart parsing, no chunking, no
+`do_PUT`, no `FormData`, no drag-and-drop handlers. Files arrive in it by being
+dropped into a folder in Explorer, and the server only ever *discovers* them.
+Both ends of the upload path were new work. What did transfer is the durability
+craft — `.part` → `replace()`, `_retry_move`, the per-writer temp name,
+`.complete` sentinels, the content-addressed cache key — and the
+`ValueError → 400 → {"error"}` contract. That is a different and smaller thing
+than "lift the upload UI", and the estimate should have said so.
+
+**§7 said `_send_file` is the reference for Range. It is the counter-example.**
+Reading it closely turned up five bugs: a reversed range computing a *negative*
+`Content-Length`, `bytes=-` yielding a 206 of the whole file, multi-range
+silently truncated to its first part, no `ETag`/`If-Range` validators, and
+`max-age=3600` on a path-keyed thumbnail URL. Starlette 1.0.0's `FileResponse`
+handles all five, verified rather than assumed. The correct port was to *delete*
+that code, and `files/tests/test_range.py` now asserts one behaviour per bug so
+an upgrade that regresses Range fails our suite instead of somebody's phone.
+
+**The service-worker landmine was smaller than feared, and the fear was still
+useful.** `flutter_service_worker.js` turned out to be Flutter's 31-line
+*self-destructing* worker, so most phones are already clean. But reading it is
+what surfaced the right mitigation: keep *serving* that script after the
+cutover rather than letting the URL 404, because a registered worker updates by
+re-fetching its own script and a 404 is a hope rather than a mechanism.
+
+**`/files` cannot be both the API prefix and a client route.** The ingress rule
+owns the namespace outright, so the drive lives at `/drive`. The draft rule
+`^/files/` also missed a bare `/files`; it needs `^/files(/|$)`.
+
+**Two things the plan never mentioned, both of which matter more than most of
+what it did mention:**
+
+*Blobs are served from the same origin as the app* — that is the whole point of
+routing by path — so an uploaded `.html` or `.svg` rendered inline runs as our
+origin and can read the PocketBase token out of localStorage. Inline rendering
+is an allowlist, the mime is sniffed from the bytes, and everything else is
+`octet-stream` + `attachment` + `nosniff`.
+
+*PocketBase compares date filters lexicographically against its own stored
+format*, which uses a space where ISO 8601 uses a `T`. `' '` (0x20) sorts below
+`'T'` (0x54), so a cutoff built with `toISOString()` matches **every timestamp
+from the same date**. The sweep hook shipped with exactly that bug: it would
+have closed every live timer started today, every ten minutes, writing a
+perfectly plausible `start + 3h` onto each one. Nothing about it looked wrong.
+The only thing that catches it is a fixture asserting that a two-hour-old timer
+is *still running* afterwards — `npm run verify:cap`.
+
+The same trap has a mirror image on the client: `new Date("2026-08-20 20:57:40Z")`
+parses in V8 and has historically failed in Safari, which is the entire team's
+phone. Every date read goes through `models/wire.ts`.
+
+**The local `pb_data` had drifted from the migrations.** All four had been
+applied, but `members` was a `base` collection with no auth fields, so
+`auth-with-password` returned 404 — a migration file edited after it ran, since
+`_migrations` records only the filename. The fix was to build a fresh dev
+database from the migrations rather than repair data (`backend/pb_data_dev`,
+gitignored), which also proved the migrations apply cleanly from scratch. Worth
+knowing before assuming the box matches the repo.
+
